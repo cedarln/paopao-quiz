@@ -27,7 +27,8 @@
     examTimeLimit: 0, // 考试时长（秒），0 表示不限时
     examTimeLeft: 0, // 剩余秒数
     examTimer: null, // 倒计时定时器
-    reviewMode: false // 当前是否为错题再练模式
+    reviewMode: false, // 当前是否为错题再练模式
+    activeCategory: null // 当前选中的题目分类筛选
   };
 
   const OPTION_LABELS = ['A', 'B', 'C', 'D'];
@@ -138,9 +139,11 @@
 
   function selectSubject(key) {
     state.selectedSubject = key;
+    state.activeCategory = null;
     document.querySelectorAll('.subject-card').forEach(card => {
       card.classList.toggle('selected', card.dataset.subject === key);
     });
+    renderCategoryChips();
     checkStartButton();
   }
 
@@ -177,6 +180,15 @@
 
     const subject = window.QUIZ_DATA[state.selectedSubject];
     let questions = [...subject.questions];
+
+    // 分类筛选
+    if (state.activeCategory) {
+      questions = questions.filter(q => q.category === state.activeCategory);
+      if (questions.length === 0) {
+        showToast('该分类下暂无题目');
+        return;
+      }
+    }
 
     // 根据模式选择题目
     if (state.mode === 'random' || state.isExam) {
@@ -1147,6 +1159,170 @@
     }, 2000);
   }
 
+  // ===== 主题切换 =====
+  const THEMES = ['light', 'dark', 'aurora', 'sunset'];
+  const THEME_ICONS = { light: '🌙', dark: '☀️', aurora: '🌙', sunset: '🌙' };
+
+  function loadTheme() {
+    const saved = localStorage.getItem('quiz-theme') || 'light';
+    applyTheme(saved);
+  }
+
+  function applyTheme(theme) {
+    if (theme === 'light') {
+      document.documentElement.removeAttribute('data-theme');
+    } else {
+      document.documentElement.setAttribute('data-theme', theme);
+    }
+    const btn = $('theme-toggle');
+    if (btn) btn.textContent = THEME_ICONS[theme] || '🎨';
+    localStorage.setItem('quiz-theme', theme);
+  }
+
+  function toggleThemePanel() {
+    const panel = $('theme-panel');
+    panel.classList.toggle('show');
+  }
+
+  // ===== 自定义背景 =====
+  function loadCustomBackground() {
+    const saved = localStorage.getItem('quiz-bg');
+    if (!saved) return;
+    try {
+      const data = JSON.parse(saved);
+      applyBackground(data.type, data.data);
+    } catch (e) {
+      console.warn('加载背景失败', e);
+    }
+  }
+
+  function applyBackground(type, dataUrl) {
+    const video = $('bg-video');
+    if (type === 'video') {
+      video.src = dataUrl;
+      video.style.display = 'block';
+      video.play().catch(() => {});
+      document.body.style.backgroundImage = 'none';
+      document.body.classList.add('custom-bg');
+    } else {
+      video.style.display = 'none';
+      video.pause();
+      video.removeAttribute('src');
+      document.body.style.backgroundImage = `url(${dataUrl})`;
+      document.body.classList.add('custom-bg');
+    }
+  }
+
+  function handleBgFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      const isVideo = file.type.startsWith('video/');
+      const type = isVideo ? 'video' : 'image';
+      try {
+        localStorage.setItem('quiz-bg', JSON.stringify({ type, data: dataUrl }));
+      } catch (err) {
+        showToast('背景文件过大，无法保存（请选择较小的文件）');
+        return;
+      }
+      applyBackground(type, dataUrl);
+      showToast('背景已设置');
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function resetBackground() {
+    const video = $('bg-video');
+    video.style.display = 'none';
+    video.pause();
+    video.removeAttribute('src');
+    document.body.style.backgroundImage = 'none';
+    document.body.classList.remove('custom-bg');
+    localStorage.removeItem('quiz-bg');
+    showToast('已恢复默认背景');
+  }
+
+  // ===== 题库搜索 =====
+  function filterSubjects(keyword) {
+    const kw = keyword.trim().toLowerCase();
+    document.querySelectorAll('.subject-card').forEach(card => {
+      const name = card.querySelector('.subject-name').textContent.toLowerCase();
+      const desc = (card.querySelector('.subject-desc')?.textContent || '').toLowerCase();
+      card.style.display = (!kw || name.includes(kw) || desc.includes(kw)) ? '' : 'none';
+    });
+  }
+
+  // ===== 分类筛选 =====
+  function renderCategoryChips() {
+    if (!state.selectedSubject || state.selectedSubject === '__wrongbook_review__') {
+      $('category-section').style.display = 'none';
+      state.activeCategory = null;
+      return;
+    }
+    const subject = window.QUIZ_DATA[state.selectedSubject];
+    const categories = [...new Set(subject.questions.map(q => q.category).filter(Boolean))];
+    const container = $('category-chips');
+    container.innerHTML = '';
+    if (categories.length === 0) {
+      $('category-section').style.display = 'none';
+      return;
+    }
+    $('category-section').style.display = '';
+    // 全部
+    const all = document.createElement('div');
+    all.className = 'category-chip active';
+    all.textContent = '全部';
+    all.addEventListener('click', () => selectCategory(null));
+    container.appendChild(all);
+    categories.forEach(cat => {
+      const chip = document.createElement('div');
+      chip.className = 'category-chip';
+      chip.textContent = cat;
+      chip.addEventListener('click', () => selectCategory(cat));
+      container.appendChild(chip);
+    });
+  }
+
+  function selectCategory(cat) {
+    state.activeCategory = cat;
+    document.querySelectorAll('.category-chip').forEach((chip, i) => {
+      chip.classList.toggle('active', cat === null ? i === 0 : chip.textContent === cat);
+    });
+  }
+
+  // 事件绑定入口
+  function bindUxEvents() {
+    // 主题
+    $('theme-toggle').addEventListener('click', toggleThemePanel);
+    document.querySelectorAll('.theme-option[data-theme]').forEach(opt => {
+      opt.addEventListener('click', () => {
+        applyTheme(opt.dataset.theme);
+        $('theme-panel').classList.remove('show');
+      });
+    });
+    document.addEventListener('click', (e) => {
+      const panel = $('theme-panel');
+      if (!panel.contains(e.target) && e.target.id !== 'theme-toggle') {
+        panel.classList.remove('show');
+      }
+    });
+
+    // 自定义背景
+    $('bg-upload-btn').addEventListener('click', () => $('bg-file-input').click());
+    $('bg-file-input').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) handleBgFile(file);
+      e.target.value = '';
+    });
+    $('bg-reset-btn').addEventListener('click', () => {
+      resetBackground();
+      $('theme-panel').classList.remove('show');
+    });
+
+    // 搜索
+    $('subject-search').addEventListener('input', (e) => filterSubjects(e.target.value));
+  }
+
   // ===== 事件绑定 =====
   function bindImportEvents() {
     $('import-btn').addEventListener('click', () => {
@@ -1201,6 +1377,8 @@
 
   // ===== 初始化 =====
   function init() {
+    loadTheme();
+    loadCustomBackground();
     loadStats();
     loadImportedBanks();
     loadRecycleBin();
@@ -1211,6 +1389,7 @@
     bindQuizEvents();
     bindResultEvents();
     bindImportEvents();
+    bindUxEvents();
     updateStatsUI();
     updateRecycleBinBadge();
     updateWrongBookBadge();
