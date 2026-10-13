@@ -195,9 +195,23 @@ python3 -m http.server 8090
 
 ---
 
-## 📸 功能截图
+## 📸 应用截图
 
-> 可在此处添加应用截图（首页、刷题页、错题本、模拟考试、主题切换等）
+<div align="center">
+
+| 首页（浅色主题） | 首页（深色主题） |
+| :---: | :---: |
+| ![首页-浅色](screenshots/01-home-light.png) | ![首页-深色](screenshots/02-home-dark.png) |
+
+| 答题页面 | 模拟考试配置 |
+| :---: | :---: |
+| ![答题](screenshots/03-quiz.png) | ![模拟考试](screenshots/04-exam-config.png) |
+
+| 错题本 |
+| :---: |
+| ![错题本](screenshots/05-wrong-book.png) |
+
+</div>
 
 ---
 
