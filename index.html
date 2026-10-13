@@ -11,6 +11,8 @@
 <body>
   <!-- 自定义背景视频 -->
   <video id="bg-video" autoplay muted loop playsinline style="display:none;"></video>
+  <!-- 粒子动画背景画布 -->
+  <canvas id="bg-particles" style="display:none;position:fixed;inset:0;width:100%;height:100%;z-index:0;"></canvas>
 
   <div id="app">
     <!-- 首页：科目选择 -->
@@ -28,6 +30,7 @@
       </header>
       <!-- 主题选择面板 -->
       <div id="theme-panel" class="theme-panel">
+        <div class="panel-section-title">🎨 主题</div>
         <div class="theme-option" data-theme="light">
           <span class="theme-swatch" style="background:#ffffff;border-color:#e5e7eb;"></span>
           <span>☀️ 浅色</span>
@@ -44,8 +47,21 @@
           <span class="theme-swatch" style="background:#ea580c;"></span>
           <span>🌅 日落橙</span>
         </div>
+        <div class="panel-section-title" style="border-top:1px solid var(--border);margin-top:8px;padding-top:12px;">🖼️ 背景</div>
+        <div class="theme-option" data-bg="default">
+          <span>🎨 默认渐变</span>
+        </div>
+        <div class="theme-option" data-bg="particles">
+          <span>✨ 粒子动画</span>
+        </div>
+        <div class="theme-option" data-bg="image">
+          <span>📷 选择图片</span>
+        </div>
+        <div class="theme-option" data-bg="video">
+          <span>🎬 选择视频</span>
+        </div>
         <div class="theme-option" id="bg-reset-btn" style="border-top:1px solid var(--border);margin-top:4px;padding-top:12px;">
-          <span>🔄 恢复默认背景</span>
+          <span>🔄 恢复默认</span>
         </div>
       </div>
       <main class="home-content">

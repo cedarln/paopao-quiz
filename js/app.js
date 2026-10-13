@@ -1185,32 +1185,119 @@
   }
 
   // ===== 自定义背景 =====
+  let particleAnim = null;
+
   function loadCustomBackground() {
     const saved = localStorage.getItem('quiz-bg');
     if (!saved) return;
     try {
       const data = JSON.parse(saved);
-      applyBackground(data.type, data.data);
+      if (data.type === 'particles') {
+        applyParticlesBackground();
+      } else {
+        applyBackground(data.type, data.data);
+      }
     } catch (e) {
       console.warn('加载背景失败', e);
     }
   }
 
+  function clearAllBackgrounds() {
+    const video = $('bg-video');
+    const canvas = $('bg-particles');
+    video.style.display = 'none';
+    video.pause();
+    video.removeAttribute('src');
+    if (particleAnim) {
+      cancelAnimationFrame(particleAnim);
+      particleAnim = null;
+    }
+    canvas.style.display = 'none';
+    document.body.style.backgroundImage = 'none';
+    document.body.classList.remove('custom-bg');
+  }
+
   function applyBackground(type, dataUrl) {
+    clearAllBackgrounds();
     const video = $('bg-video');
     if (type === 'video') {
       video.src = dataUrl;
       video.style.display = 'block';
       video.play().catch(() => {});
       document.body.style.backgroundImage = 'none';
-      document.body.classList.add('custom-bg');
     } else {
-      video.style.display = 'none';
-      video.pause();
-      video.removeAttribute('src');
       document.body.style.backgroundImage = `url(${dataUrl})`;
-      document.body.classList.add('custom-bg');
     }
+    document.body.classList.add('custom-bg');
+  }
+
+  function applyParticlesBackground() {
+    clearAllBackgrounds();
+    document.body.classList.add('custom-bg');
+    const canvas = $('bg-particles');
+    canvas.style.display = 'block';
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const count = Math.min(80, Math.floor((canvas.width * canvas.height) / 15000));
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2.5 + 0.5,
+        dx: (Math.random() - 0.5) * 0.4,
+        dy: (Math.random() - 0.5) * 0.4,
+        opacity: Math.random() * 0.5 + 0.2
+      });
+    }
+
+    function getThemeColor() {
+      const theme = document.documentElement.getAttribute('data-theme');
+      if (theme === 'dark') return 'rgba(129, 140, 248, ';
+      if (theme === 'aurora') return 'rgba(16, 185, 129, ';
+      if (theme === 'sunset') return 'rgba(249, 115, 22, ';
+      return 'rgba(79, 70, 229, ';
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      const color = getThemeColor();
+      particles.forEach(p => {
+        p.x += p.dx;
+        p.y += p.dy;
+        if (p.x < 0 || p.x > canvas.width) p.dx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = color + p.opacity + ')';
+        ctx.fill();
+      });
+      // 连线
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = color + (0.15 * (1 - dist / 120)) + ')';
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+      particleAnim = requestAnimationFrame(animate);
+    }
+    animate();
   }
 
   function handleBgFile(file) {
@@ -1231,15 +1318,52 @@
     reader.readAsDataURL(file);
   }
 
+  function setBackgroundType(type) {
+    if (type === 'default') {
+      resetBackground();
+    } else if (type === 'particles') {
+      localStorage.setItem('quiz-bg', JSON.stringify({ type: 'particles' }));
+      applyParticlesBackground();
+      showToast('粒子背景已启用');
+    } else if (type === 'image') {
+      $('bg-file-input').accept = 'image/*';
+      $('bg-file-input').click();
+    } else if (type === 'video') {
+      $('bg-file-input').accept = 'video/*';
+      $('bg-file-input').click();
+    }
+  }
+
   function resetBackground() {
-    const video = $('bg-video');
-    video.style.display = 'none';
-    video.pause();
-    video.removeAttribute('src');
-    document.body.style.backgroundImage = 'none';
-    document.body.classList.remove('custom-bg');
+    clearAllBackgrounds();
     localStorage.removeItem('quiz-bg');
     showToast('已恢复默认背景');
+  }
+
+  // ===== 点击波纹效果 =====
+  const RIPPLE_SELECTOR = '.start-btn, .exam-start-btn, .import-btn, .option-item, .category-chip, .qty-option, .theme-option, .bg-upload-btn, .theme-toggle, .subject-card';
+
+  function bindRippleEffects() {
+    // 使用事件委托，支持动态创建的元素
+    document.addEventListener('click', (e) => {
+      const target = e.target.closest(RIPPLE_SELECTOR);
+      if (target) {
+        const rect = target.getBoundingClientRect();
+        const ripple = document.createElement('span');
+        const size = Math.max(rect.width, rect.height);
+        const x = e.clientX - rect.left - size / 2;
+        const y = e.clientY - rect.top - size / 2;
+        ripple.className = 'ripple';
+        ripple.style.width = ripple.style.height = size + 'px';
+        ripple.style.left = x + 'px';
+        ripple.style.top = y + 'px';
+        const bg = getComputedStyle(target).backgroundColor;
+        const isLight = bg && (parseInt(bg.match(/\d+/)[0]) > 128);
+        ripple.style.background = isLight ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)';
+        target.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+      }
+    });
   }
 
   // ===== 题库搜索 =====
@@ -1300,6 +1424,13 @@
         $('theme-panel').classList.remove('show');
       });
     });
+    // 背景类型选择
+    document.querySelectorAll('.theme-option[data-bg]').forEach(opt => {
+      opt.addEventListener('click', () => {
+        setBackgroundType(opt.dataset.bg);
+        $('theme-panel').classList.remove('show');
+      });
+    });
     document.addEventListener('click', (e) => {
       const panel = $('theme-panel');
       if (!panel.contains(e.target) && e.target.id !== 'theme-toggle') {
@@ -1307,8 +1438,7 @@
       }
     });
 
-    // 自定义背景
-    $('bg-upload-btn').addEventListener('click', () => $('bg-file-input').click());
+    // 自定义背景文件选择
     $('bg-file-input').addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) handleBgFile(file);
@@ -1321,6 +1451,9 @@
 
     // 搜索
     $('subject-search').addEventListener('input', (e) => filterSubjects(e.target.value));
+
+    // 点击波纹效果
+    bindRippleEffects();
   }
 
   // ===== 事件绑定 =====
