@@ -203,6 +203,132 @@ body.custom-bg::before {
   font-weight: 400;
 }
 
+/* 等级/打卡徽章 */
+.home-badges {
+  display: flex;
+  gap: 12px;
+  padding: 16px 16px 0;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.home-badge {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(8px);
+  transition: transform 0.2s;
+}
+
+.home-badge:hover {
+  transform: translateY(-2px);
+}
+
+.badge-icon {
+  font-size: 32px;
+}
+
+.badge-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.badge-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.badge-value {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.xp-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin: 4px 0 2px;
+}
+
+.xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+
+.xp-label {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 每日一言 */
+.daily-quote {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 12px 16px 0;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* 连击弹出 */
+.combo-popup {
+  position: fixed;
+  top: 30%;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  font-size: 20px;
+  font-weight: 800;
+  box-shadow: 0 8px 30px rgba(239, 68, 68, 0.4);
+  opacity: 0;
+  transition: all 0.3s ease;
+  z-index: 9999;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* 升级弹窗 */
+.levelup-toast {
+  position: fixed;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%) scale(0.5);
+  background: linear-gradient(135deg, #8b5cf6, #ec4899);
+  color: white;
+  padding: 20px 40px;
+  border-radius: 20px;
+  font-size: 22px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(139, 92, 246, 0.5);
+  opacity: 0;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.levelup-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) scale(1);
+}
+
 .home-content {
   flex: 1;
   padding: 24px 16px 120px;

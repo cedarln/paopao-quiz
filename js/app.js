@@ -28,7 +28,12 @@
     examTimeLeft: 0, // 剩余秒数
     examTimer: null, // 倒计时定时器
     reviewMode: false, // 当前是否为错题再练模式
-    activeCategory: null // 当前选中的题目分类筛选
+    activeCategory: null, // 当前选中的题目分类筛选
+    combo: 0, // 当前连击数
+    xp: 0, // 经验值
+    level: 1, // 等级
+    streakDays: 1, // 连续打卡天数
+    streakLastDate: null // 上次打卡日期
   };
 
   const OPTION_LABELS = ['A', 'B', 'C', 'D'];
@@ -36,6 +41,107 @@
   const RECYCLE_BIN_STORAGE = 'quiz-recycle-bin';
   const HIDDEN_KEYS_STORAGE = 'quiz-hidden-keys';
   const WRONG_BOOK_STORAGE = 'quiz-wrong-book';
+  const XP_STORAGE = 'quiz-xp-level';
+  const STREAK_STORAGE = 'quiz-streak';
+
+  // ===== 音效系统（Web Audio API，无外部文件）=====
+  let audioCtx = null;
+  function getAudioCtx() {
+    if (!audioCtx) {
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) { return null; }
+    }
+    return audioCtx;
+  }
+  function playTone(freq, duration, type = 'sine', volume = 0.15) {
+    const ctx = getAudioCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(volume, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  }
+  const sfx = {
+    correct: () => { playTone(660, 0.1, 'sine', 0.12); setTimeout(() => playTone(880, 0.15, 'sine', 0.12), 80); },
+    wrong: () => { playTone(200, 0.2, 'sawtooth', 0.1); },
+    click: () => { playTone(440, 0.05, 'square', 0.05); },
+    levelUp: () => { playTone(523, 0.1, 'sine', 0.15); setTimeout(() => playTone(659, 0.1, 'sine', 0.15), 100); setTimeout(() => playTone(784, 0.2, 'sine', 0.15), 200); }
+  };
+
+  // ===== 每日一言 =====
+  const DAILY_QUOTES = [
+    '今天也要元气满满地学习呀！✨',
+    '努力的人运气都不会太差 🍀',
+    '每一道题都是通往成功的台阶 🪜',
+    '坚持就是胜利，你比想象中更强 💪',
+    '学海无涯，刷题作舟 🚣',
+    '愿你合上笔盖的那一刻，有战士收刀入鞘的骄傲 ⚔️',
+    '天赋决定上限，努力决定下限 🌟',
+    '别让明天的你，讨厌今天的自己 ⏰',
+    '乾坤未定，你我皆是黑马 🐎',
+    '再坚持一下，上岸就在前方 🏊'
+  ];
+  function getDailyQuote() {
+    const today = new Date().toDateString();
+    let idx = 0;
+    for (let i = 0; i < today.length; i++) idx += today.charCodeAt(i);
+    return DAILY_QUOTES[idx % DAILY_QUOTES.length];
+  }
+
+  // ===== XP / 等级系统 =====
+  function xpForLevel(level) { return level * 100; }
+  function loadXp() {
+    const saved = localStorage.getItem(XP_STORAGE);
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        state.xp = d.xp || 0;
+        state.level = d.level || 1;
+      } catch (e) {}
+    }
+  }
+  function saveXp() {
+    localStorage.setItem(XP_STORAGE, JSON.stringify({ xp: state.xp, level: state.level }));
+  }
+  function addXp(amount) {
+    state.xp += amount;
+    let leveledUp = false;
+    while (state.xp >= xpForLevel(state.level)) {
+      state.xp -= xpForLevel(state.level);
+      state.level++;
+      leveledUp = true;
+    }
+    saveXp();
+    return leveledUp;
+  }
+
+  // ===== 连续打卡 =====
+  function updateStreak() {
+    const today = new Date().toDateString();
+    const saved = localStorage.getItem(STREAK_STORAGE);
+    if (saved) {
+      try {
+        const d = JSON.parse(saved);
+        if (d.lastDate === today) return; // 今天已打卡
+        const yesterday = new Date(Date.now() - 86400000).toDateString();
+        if (d.lastDate === yesterday) {
+          state.streakDays = (d.days || 1) + 1;
+        } else {
+          state.streakDays = 1;
+        }
+      } catch (e) { state.streakDays = 1; }
+    }
+    state.streakLastDate = today;
+    localStorage.setItem(STREAK_STORAGE, JSON.stringify({ days: state.streakDays, lastDate: today }));
+  }
 
   // ===== DOM 元素 =====
   const $ = (id) => document.getElementById(id);
@@ -200,6 +306,7 @@
     state.questions = questions.slice(0, qty);
     state.currentIndex = 0;
     state.answers = [];
+    state.combo = 0; // 重置连击
 
     showPage('quiz');
     renderQuestion();
@@ -423,6 +530,23 @@
     if (isRight) state.stats.totalCorrect++;
     saveStats();
 
+    // 连击 + XP + 音效
+    if (isRight) {
+      state.combo++;
+      const comboBonus = Math.floor(state.combo / 3) * 2;
+      const xpGain = 10 + comboBonus;
+      const leveledUp = addXp(xpGain);
+      sfx.correct();
+      showComboEffect(state.combo, xpGain);
+      if (leveledUp) {
+        sfx.levelUp();
+        showLevelUpToast();
+      }
+    } else {
+      state.combo = 0;
+      sfx.wrong();
+    }
+
     // 显示结果
     showAnswerResult(index, isRight);
 
@@ -432,6 +556,27 @@
     if (state.currentIndex === state.questions.length - 1) {
       nextBtn.textContent = '查看结果';
     }
+  }
+
+  // ===== 连击特效 =====
+  function showComboEffect(combo, xp) {
+    if (combo < 2) return;
+    const el = document.createElement('div');
+    el.className = 'combo-popup';
+    el.textContent = combo >= 10 ? `🔥 ${combo} 连击! +${xp}XP` : `✨ ${combo} 连击 +${xp}XP`;
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '1'; el.style.transform = 'translateY(-30px) scale(1.1)'; }, 10);
+    setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateY(-60px) scale(0.9)'; }, 900);
+    setTimeout(() => el.remove(), 1500);
+  }
+
+  function showLevelUpToast() {
+    const el = document.createElement('div');
+    el.className = 'levelup-toast';
+    el.innerHTML = `🎉 升级啦！<br>当前等级：Lv.${state.level}`;
+    document.body.appendChild(el);
+    setTimeout(() => el.classList.add('show'), 10);
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 500); }, 2500);
   }
 
   // ===== 显示答题结果 =====
@@ -1508,16 +1653,83 @@
     });
   }
 
+  // ===== 首页徽章（等级/XP/打卡）=====
+  function renderHomeBadges() {
+    const container = $('home-badges');
+    if (!container) return;
+    const xpNeeded = xpForLevel(state.level);
+    const xpPct = Math.min(100, Math.round((state.xp / xpNeeded) * 100));
+    container.innerHTML = `
+      <div class="home-badge">
+        <div class="badge-icon">🏆</div>
+        <div class="badge-text">
+          <div class="badge-title">Lv.${state.level}</div>
+          <div class="xp-bar"><div class="xp-fill" style="width:${xpPct}%"></div></div>
+          <div class="xp-label">${state.xp}/${xpNeeded} XP</div>
+        </div>
+      </div>
+      <div class="home-badge">
+        <div class="badge-icon">🔥</div>
+        <div class="badge-text">
+          <div class="badge-title">连续打卡</div>
+          <div class="badge-value">${state.streakDays} 天</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ===== 每日一言 =====
+  function renderDailyQuote() {
+    const el = $('daily-quote');
+    if (el) el.textContent = getDailyQuote();
+  }
+
+  // ===== 标题打字机效果 =====
+  function typewriterTitle() {
+    const el = $('app-title');
+    if (!el) return;
+    const full = el.textContent;
+    el.textContent = '';
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < full.length) {
+        el.textContent += full.charAt(i);
+        i++;
+      } else {
+        clearInterval(interval);
+      }
+    }, 120);
+  }
+
+  // ===== 卡片错落入场动画 =====
+  function staggerCards() {
+    const cards = document.querySelectorAll('.subject-card');
+    cards.forEach((card, i) => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(30px)';
+      setTimeout(() => {
+        card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+        card.style.opacity = '1';
+        card.style.transform = 'translateY(0)';
+      }, i * 80);
+    });
+  }
+
   // ===== 初始化 =====
   function init() {
     loadTheme();
     loadCustomBackground();
     loadStats();
+    loadXp();
     loadImportedBanks();
     loadRecycleBin();
     loadWrongBook();
+    updateStreak();
     hideDeletedBanks(); // 隐藏已放入回收站的题库
     renderSubjectList();
+    renderHomeBadges();
+    renderDailyQuote();
+    typewriterTitle();
     initSettings();
     bindQuizEvents();
     bindResultEvents();
@@ -1526,6 +1738,7 @@
     updateStatsUI();
     updateRecycleBinBadge();
     updateWrongBookBadge();
+    staggerCards();
   }
 
   // 启动
