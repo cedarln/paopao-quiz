@@ -1882,5 +1882,153 @@ body.custom-bg::before {
   transform: scale(1.15);
 }
 
+/* ===== 成就弹窗 ===== */
+.achievement-toast {
+  position: fixed;
+  top: 80px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 14px;
+  box-shadow: 0 8px 30px rgba(245, 158, 11, 0.4);
+  opacity: 0;
+  transform: translateX(120%);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  z-index: 9999;
+  pointer-events: none;
+  max-width: 280px;
+}
+.achievement-toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+.achievement-toast .ach-icon {
+  font-size: 36px;
+}
+.achievement-toast .ach-label {
+  font-size: 11px;
+  opacity: 0.85;
+}
+.achievement-toast .ach-name {
+  font-size: 16px;
+  font-weight: 800;
+}
+.achievement-toast .ach-desc {
+  font-size: 12px;
+  opacity: 0.9;
+}
 
+.achievement-stats {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+.achievement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.ach-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+.ach-item.unlocked {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08));
+  border-color: rgba(245, 158, 11, 0.3);
+}
+.ach-item.locked {
+  opacity: 0.5;
+}
+.ach-item-icon {
+  font-size: 28px;
+}
+.ach-item-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ach-item-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ===== 学习日历热力图 ===== */
+.heatmap-summary {
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.heatmap-summary b {
+  color: var(--primary);
+  font-size: 16px;
+}
+.heatmap-container {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.heatmap-grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 1fr);
+  gap: 3px;
+  min-width: 100%;
+}
+.heatmap-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.legend-cell {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+}
+
+/* ===== 收藏按钮 ===== */
+.favorite-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #d1d5db;
+  transition: all 0.2s;
+  padding: 0 4px;
+  line-height: 1;
+}
+.favorite-btn.active {
+  color: #f59e0b;
+  transform: scale(1.2);
+}
+.favorite-btn:hover {
+  transform: scale(1.3);
+}
+
+/* 新按钮配色 */
+.achievement-btn { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.heatmap-btn { background: linear-gradient(135deg, #10b981, #059669); }
+.favorites-btn { background: linear-gradient(135deg, #ec4899, #db2777); }
 

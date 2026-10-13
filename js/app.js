@@ -33,7 +33,11 @@
     xp: 0, // 经验值
     level: 1, // 等级
     streakDays: 1, // 连续打卡天数
-    streakLastDate: null // 上次打卡日期
+    streakLastDate: null, // 上次打卡日期
+    achievements: {}, // 已解锁成就：id -> unlockedAt
+    favorites: {}, // 收藏题目：subjectKey__id -> { subjectKey, id, question, options, answer, explanation, category }
+    studyLog: {}, // 学习日志：date -> count
+    answeredSubjects: {} // 已答过的科目：key -> true
   };
 
   const OPTION_LABELS = ['A', 'B', 'C', 'D'];
@@ -43,6 +47,101 @@
   const WRONG_BOOK_STORAGE = 'quiz-wrong-book';
   const XP_STORAGE = 'quiz-xp-level';
   const STREAK_STORAGE = 'quiz-streak';
+  const ACHIEVEMENTS_STORAGE = 'quiz-achievements';
+  const FAVORITES_STORAGE = 'quiz-favorites';
+  const STUDY_LOG_STORAGE = 'quiz-study-log';
+
+  // ===== 成就系统 =====
+  const ACHIEVEMENTS = [
+    { id: 'first-answer', icon: '🌱', name: '初出茅庐', desc: '完成第一道题' },
+    { id: 'correct-10', icon: '✅', name: '小试牛刀', desc: '累计答对 10 题' },
+    { id: 'correct-50', icon: '🎯', name: '百步穿杨', desc: '累计答对 50 题' },
+    { id: 'correct-100', icon: '🏹', name: '百发百中', desc: '累计答对 100 题' },
+    { id: 'combo-5', icon: '⚡', name: '连击达人', desc: '达成 5 连击' },
+    { id: 'combo-10', icon: '🔥', name: '火焰连击', desc: '达成 10 连击' },
+    { id: 'level-5', icon: '⭐', name: '等级突破', desc: '达到 Lv.5' },
+    { id: 'level-10', icon: '🌟', name: '学霸之路', desc: '达到 Lv.10' },
+    { id: 'streak-3', icon: '📅', name: '三日坚持', desc: '连续打卡 3 天' },
+    { id: 'streak-7', icon: '🔥', name: '一周不辍', desc: '连续打卡 7 天' },
+    { id: 'first-exam', icon: '📝', name: '初次模考', desc: '完成一次模拟考试' },
+    { id: 'all-subjects', icon: '📚', name: '博览群书', desc: '每个科目都刷过题' }
+  ];
+
+  function loadAchievements() {
+    const saved = localStorage.getItem(ACHIEVEMENTS_STORAGE);
+    if (saved) { try { state.achievements = JSON.parse(saved); } catch (e) {} }
+  }
+  function saveAchievements() {
+    localStorage.setItem(ACHIEVEMENTS_STORAGE, JSON.stringify(state.achievements));
+  }
+  function unlockAchievement(id) {
+    if (state.achievements[id]) return false;
+    state.achievements[id] = Date.now();
+    saveAchievements();
+    const ach = ACHIEVEMENTS.find(a => a.id === id);
+    if (ach) showAchievementToast(ach);
+    return true;
+  }
+  function showAchievementToast(ach) {
+    const el = document.createElement('div');
+    el.className = 'achievement-toast';
+    el.innerHTML = `<div class="ach-icon">${ach.icon}</div><div class="ach-text"><div class="ach-label">🏆 成就解锁</div><div class="ach-name">${ach.name}</div><div class="ach-desc">${ach.desc}</div></div>`;
+    document.body.appendChild(el);
+    setTimeout(() => el.classList.add('show'), 10);
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 500); }, 3000);
+  }
+  function checkAchievements() {
+    const correct = state.stats.totalCorrect || 0;
+    if (correct >= 1) unlockAchievement('first-answer');
+    if (correct >= 10) unlockAchievement('correct-10');
+    if (correct >= 50) unlockAchievement('correct-50');
+    if (correct >= 100) unlockAchievement('correct-100');
+    if (state.combo >= 5) unlockAchievement('combo-5');
+    if (state.combo >= 10) unlockAchievement('combo-10');
+    if (state.level >= 5) unlockAchievement('level-5');
+    if (state.level >= 10) unlockAchievement('level-10');
+    if (state.streakDays >= 3) unlockAchievement('streak-3');
+    if (state.streakDays >= 7) unlockAchievement('streak-7');
+    if (state.answeredSubjects && Object.keys(state.answeredSubjects).length >= Object.keys(window.QUIZ_DATA || {}).length) {
+      unlockAchievement('all-subjects');
+    }
+  }
+
+  // ===== 学习日志 =====
+  function loadStudyLog() {
+    const saved = localStorage.getItem(STUDY_LOG_STORAGE);
+    if (saved) { try { state.studyLog = JSON.parse(saved); } catch (e) {} }
+  }
+  function saveStudyLog() {
+    localStorage.setItem(STUDY_LOG_STORAGE, JSON.stringify(state.studyLog));
+  }
+  function logStudy() {
+    const today = new Date().toISOString().slice(0, 10);
+    state.studyLog[today] = (state.studyLog[today] || 0) + 1;
+    saveStudyLog();
+  }
+
+  // ===== 收藏夹 =====
+  function loadFavorites() {
+    const saved = localStorage.getItem(FAVORITES_STORAGE);
+    if (saved) { try { state.favorites = JSON.parse(saved); } catch (e) {} }
+  }
+  function saveFavorites() {
+    localStorage.setItem(FAVORITES_STORAGE, JSON.stringify(state.favorites));
+  }
+  function toggleFavorite(q) {
+    const key = `${state.selectedSubject}__${q.id}`;
+    if (state.favorites[key]) {
+      delete state.favorites[key];
+    } else {
+      state.favorites[key] = { subjectKey: state.selectedSubject, id: q.id, question: q.question, options: q.options, answer: q.answer, explanation: q.explanation, category: q.category };
+    }
+    saveFavorites();
+    return !state.favorites[key] ? false : true;
+  }
+  function isFavorite(q) {
+    return !!state.favorites[`${state.selectedSubject}__${q.id}`];
+  }
 
   // ===== 音效系统（Web Audio API，无外部文件）=====
   let audioCtx = null;
@@ -389,6 +488,10 @@
     });
     saveStats();
 
+    // 首次模考成就
+    unlockAchievement('first-exam');
+    checkAchievements();
+
     // 收集错题
     if (!state.reviewMode) {
       collectWrongQuestions();
@@ -442,6 +545,19 @@
     $('question-category').textContent = q.category || '选择题';
     $('question-index').textContent = `第 ${idx} 题`;
     $('question-text').textContent = q.question;
+
+    // 收藏按钮状态
+    const favBtn = $('favorite-btn');
+    const fav = isFavorite(q);
+    favBtn.textContent = fav ? '★' : '☆';
+    favBtn.classList.toggle('active', fav);
+    favBtn.onclick = () => {
+      const nowFav = toggleFavorite(q);
+      favBtn.textContent = nowFav ? '★' : '☆';
+      favBtn.classList.toggle('active', nowFav);
+      updateFavoritesBadge();
+      showToast(nowFav ? '⭐ 已收藏' : '已取消收藏');
+    };
 
     // 选项
     const optionsContainer = $('options-list');
@@ -530,6 +646,10 @@
     if (isRight) state.stats.totalCorrect++;
     saveStats();
 
+    // 记录学习日志 + 已答科目
+    logStudy();
+    state.answeredSubjects[state.selectedSubject] = true;
+
     // 连击 + XP + 音效
     if (isRight) {
       state.combo++;
@@ -546,6 +666,9 @@
       state.combo = 0;
       sfx.wrong();
     }
+
+    // 检查成就解锁
+    checkAchievements();
 
     // 显示结果
     showAnswerResult(index, isRight);
@@ -1653,6 +1776,114 @@
     });
   }
 
+  // ===== 成就弹窗 =====
+  function openAchievementModal() {
+    const unlocked = Object.keys(state.achievements).length;
+    $('achievement-stats').textContent = `已解锁 ${unlocked} / ${ACHIEVEMENTS.length} 个成就`;
+    const list = $('achievement-list');
+    list.innerHTML = ACHIEVEMENTS.map(a => {
+      const got = !!state.achievements[a.id];
+      return `<div class="ach-item ${got ? 'unlocked' : 'locked'}">
+        <div class="ach-item-icon">${a.icon}</div>
+        <div class="ach-item-text">
+          <div class="ach-item-name">${a.name} ${got ? '✅' : '🔒'}</div>
+          <div class="ach-item-desc">${a.desc}</div>
+        </div>
+      </div>`;
+    }).join('');
+    $('achievement-modal').style.display = 'flex';
+  }
+  function updateAchievementBadge() {
+    const count = Object.keys(state.achievements).length;
+    const badge = $('achievement-badge');
+    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+    else badge.style.display = 'none';
+  }
+
+  // ===== 学习日历热力图 =====
+  function openHeatmapModal() {
+    const container = $('heatmap-container');
+    const today = new Date();
+    const days = 365;
+    const start = new Date(today);
+    start.setDate(start.getDate() - days);
+    // 对齐到周日
+    start.setDate(start.getDate() - start.getDay());
+
+    const total = Object.values(state.studyLog).reduce((a, b) => a + b, 0);
+    const activeDays = Object.keys(state.studyLog).length;
+    $('heatmap-summary').innerHTML = `累计刷题 <b>${total}</b> 题 · 活跃 <b>${activeDays}</b> 天`;
+
+    const weeks = Math.ceil((days + (new Date().getDay() + 1)) / 7);
+    let html = '<div class="heatmap-grid" style="grid-template-columns: repeat(' + weeks + ', 1fr);">';
+    const colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
+    const d = new Date(start);
+    for (let i = 0; i < weeks * 7; i++) {
+      const dateStr = d.toISOString().slice(0, 10);
+      const count = state.studyLog[dateStr] || 0;
+      const isFuture = d > today;
+      let color = '#ebedf0';
+      if (count > 0 && !isFuture) {
+        const idx = Math.min(4, Math.ceil(count / 5));
+        color = colors[idx];
+      }
+      const title = isFuture ? '' : `${dateStr}: ${count} 题`;
+      html += `<div class="heatmap-cell" style="background:${color};" title="${title}"></div>`;
+      d.setDate(d.getDate() + 1);
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    $('heatmap-modal').style.display = 'flex';
+  }
+
+  // ===== 收藏夹弹窗 =====
+  function openFavoritesModal() {
+    const list = $('favorites-list');
+    const favs = Object.values(state.favorites);
+    if (favs.length === 0) {
+      list.innerHTML = '<div class="empty-state">还没有收藏的题目</div>';
+    } else {
+      list.innerHTML = favs.map(f => `
+        <div class="recycle-item">
+          <div class="recycle-item-info">
+            <div class="recycle-item-name">${escapeHtml(f.question)}</div>
+            <div class="recycle-item-meta">${f.category || ''}</div>
+          </div>
+          <button class="recycle-remove" data-favkey="${f.subjectKey}__${f.id}">✕</button>
+        </div>
+      `).join('');
+      list.querySelectorAll('.recycle-remove').forEach(btn => {
+        btn.onclick = () => {
+          const key = btn.dataset.favkey;
+          delete state.favorites[key];
+          saveFavorites();
+          openFavoritesModal();
+          updateFavoritesBadge();
+        };
+      });
+    }
+    $('favorites-modal').style.display = 'flex';
+  }
+  function updateFavoritesBadge() {
+    const count = Object.keys(state.favorites).length;
+    const badge = $('favorites-badge');
+    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
+    else badge.style.display = 'none';
+  }
+  function startFavoritesReview() {
+    const favs = Object.values(state.favorites);
+    if (favs.length === 0) { showToast('还没有收藏的题目'); return; }
+    state.selectedSubject = '__favorites__';
+    state.questions = favs.map(f => ({ ...f }));
+    state.currentIndex = 0;
+    state.answers = [];
+    state.combo = 0;
+    state.reviewMode = true;
+    $('favorites-modal').style.display = 'none';
+    showPage('quiz');
+    renderQuestion();
+  }
+
   // ===== 首页徽章（等级/XP/打卡）=====
   function renderHomeBadges() {
     const container = $('home-badges');
@@ -1715,12 +1946,38 @@
     });
   }
 
+  // ===== 游戏化功能事件绑定 =====
+  function bindGamificationEvents() {
+    $('achievement-btn').addEventListener('click', openAchievementModal);
+    $('heatmap-btn').addEventListener('click', openHeatmapModal);
+    $('favorites-btn').addEventListener('click', openFavoritesModal);
+    $('favorites-review-btn').addEventListener('click', startFavoritesReview);
+    $('favorites-clear-btn').addEventListener('click', () => {
+      if (Object.keys(state.favorites).length === 0) return;
+      if (confirm('确定要清空所有收藏吗？')) {
+        state.favorites = {};
+        saveFavorites();
+        openFavoritesModal();
+        updateFavoritesBadge();
+      }
+    });
+    // 点击遮罩关闭弹窗
+    ['achievement-modal', 'heatmap-modal', 'favorites-modal'].forEach(id => {
+      $(id).addEventListener('click', (e) => {
+        if (e.target.id === id) $(id).style.display = 'none';
+      });
+    });
+  }
+
   // ===== 初始化 =====
   function init() {
     loadTheme();
     loadCustomBackground();
     loadStats();
     loadXp();
+    loadAchievements();
+    loadFavorites();
+    loadStudyLog();
     loadImportedBanks();
     loadRecycleBin();
     loadWrongBook();
@@ -1735,9 +1992,12 @@
     bindResultEvents();
     bindImportEvents();
     bindUxEvents();
+    bindGamificationEvents();
     updateStatsUI();
     updateRecycleBinBadge();
     updateWrongBookBadge();
+    updateAchievementBadge();
+    updateFavoritesBadge();
     staggerCards();
   }
 
