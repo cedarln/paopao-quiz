@@ -52,19 +52,26 @@
   const STUDY_LOG_STORAGE = 'quiz-study-log';
 
   // ===== 成就系统 =====
+  // type: 答题/连击/等级/打卡/综合  | progress: { current, target } 或 null（无进度条）
   const ACHIEVEMENTS = [
-    { id: 'first-answer', icon: '🌱', name: '初出茅庐', desc: '完成第一道题' },
-    { id: 'correct-10', icon: '✅', name: '小试牛刀', desc: '累计答对 10 题' },
-    { id: 'correct-50', icon: '🎯', name: '百步穿杨', desc: '累计答对 50 题' },
-    { id: 'correct-100', icon: '🏹', name: '百发百中', desc: '累计答对 100 题' },
-    { id: 'combo-5', icon: '⚡', name: '连击达人', desc: '达成 5 连击' },
-    { id: 'combo-10', icon: '🔥', name: '火焰连击', desc: '达成 10 连击' },
-    { id: 'level-5', icon: '⭐', name: '等级突破', desc: '达到 Lv.5' },
-    { id: 'level-10', icon: '🌟', name: '学霸之路', desc: '达到 Lv.10' },
-    { id: 'streak-3', icon: '📅', name: '三日坚持', desc: '连续打卡 3 天' },
-    { id: 'streak-7', icon: '🔥', name: '一周不辍', desc: '连续打卡 7 天' },
-    { id: 'first-exam', icon: '📝', name: '初次模考', desc: '完成一次模拟考试' },
-    { id: 'all-subjects', icon: '📚', name: '博览群书', desc: '每个科目都刷过题' }
+    { id: 'first-answer', icon: '🌱', name: '初出茅庐', desc: '完成第一道题', cat: '答题', progress: () => Math.min(1, state.stats.totalAnswered || 0) + '/' + 1 },
+    { id: 'correct-10', icon: '✅', name: '小试牛刀', desc: '累计答对 10 题', cat: '答题', progress: () => Math.min(10, state.stats.totalCorrect || 0) + '/10' },
+    { id: 'correct-50', icon: '🎯', name: '百步穿杨', desc: '累计答对 50 题', cat: '答题', progress: () => Math.min(50, state.stats.totalCorrect || 0) + '/50' },
+    { id: 'correct-100', icon: '🏹', name: '百发百中', desc: '累计答对 100 题', cat: '答题', progress: () => Math.min(100, state.stats.totalCorrect || 0) + '/100' },
+    { id: 'correct-200', icon: '💎', name: '题海无涯', desc: '累计答对 200 题', cat: '答题', progress: () => Math.min(200, state.stats.totalCorrect || 0) + '/200' },
+    { id: 'combo-5', icon: '⚡', name: '连击达人', desc: '达成 5 连击', cat: '连击', progress: () => Math.min(5, state.combo) + '/5' },
+    { id: 'combo-10', icon: '🔥', name: '火焰连击', desc: '达成 10 连击', cat: '连击', progress: () => Math.min(10, state.combo) + '/10' },
+    { id: 'combo-15', icon: '🌋', name: '连击大师', desc: '达成 15 连击', cat: '连击', progress: () => Math.min(15, state.combo) + '/15' },
+    { id: 'level-5', icon: '⭐', name: '等级突破', desc: '达到 Lv.5', cat: '等级', progress: () => Math.min(5, state.level) + '/5' },
+    { id: 'level-10', icon: '🌟', name: '学霸之路', desc: '达到 Lv.10', cat: '等级', progress: () => Math.min(10, state.level) + '/10' },
+    { id: 'level-15', icon: '👑', name: '学神降临', desc: '达到 Lv.15', cat: '等级', progress: () => Math.min(15, state.level) + '/15' },
+    { id: 'streak-3', icon: '📅', name: '三日坚持', desc: '连续打卡 3 天', cat: '打卡', progress: () => Math.min(3, state.streakDays) + '/3' },
+    { id: 'streak-7', icon: '🔥', name: '一周不辍', desc: '连续打卡 7 天', cat: '打卡', progress: () => Math.min(7, state.streakDays) + '/7' },
+    { id: 'streak-30', icon: '🏆', name: '坚持一月', desc: '连续打卡 30 天', cat: '打卡', progress: () => Math.min(30, state.streakDays) + '/30' },
+    { id: 'first-exam', icon: '📝', name: '初次模考', desc: '完成一次模拟考试', cat: '综合', progress: null },
+    { id: 'all-subjects', icon: '📚', name: '博览群书', desc: '每个科目都刷过题', cat: '综合', progress: () => Math.min(Object.keys(window.QUIZ_DATA || {}).length, Object.keys(state.answeredSubjects || {}).length) + '/' + Object.keys(window.QUIZ_DATA || {}).length },
+    { id: 'import-bank', icon: '📥', name: '海纳百川', desc: '导入一个自定义题库', cat: '综合', progress: () => Math.min(1, Object.keys(state.importedKeys || {}).length) + '/1' },
+    { id: 'favorites-5', icon: '⭐', name: '收藏家', desc: '收藏 5 道题目', cat: '综合', progress: () => Math.min(5, Object.keys(state.favorites || {}).length) + '/5' }
   ];
 
   function loadAchievements() {
@@ -96,15 +103,21 @@
     if (correct >= 10) unlockAchievement('correct-10');
     if (correct >= 50) unlockAchievement('correct-50');
     if (correct >= 100) unlockAchievement('correct-100');
+    if (correct >= 200) unlockAchievement('correct-200');
     if (state.combo >= 5) unlockAchievement('combo-5');
     if (state.combo >= 10) unlockAchievement('combo-10');
+    if (state.combo >= 15) unlockAchievement('combo-15');
     if (state.level >= 5) unlockAchievement('level-5');
     if (state.level >= 10) unlockAchievement('level-10');
+    if (state.level >= 15) unlockAchievement('level-15');
     if (state.streakDays >= 3) unlockAchievement('streak-3');
     if (state.streakDays >= 7) unlockAchievement('streak-7');
+    if (state.streakDays >= 30) unlockAchievement('streak-30');
     if (state.answeredSubjects && Object.keys(state.answeredSubjects).length >= Object.keys(window.QUIZ_DATA || {}).length) {
       unlockAchievement('all-subjects');
     }
+    if (Object.keys(state.importedKeys || {}).length >= 1) unlockAchievement('import-bank');
+    if (Object.keys(state.favorites || {}).length >= 5) unlockAchievement('favorites-5');
   }
 
   // ===== 学习日志 =====
@@ -1779,18 +1792,38 @@
   // ===== 成就弹窗 =====
   function openAchievementModal() {
     const unlocked = Object.keys(state.achievements).length;
-    $('achievement-stats').textContent = `已解锁 ${unlocked} / ${ACHIEVEMENTS.length} 个成就`;
-    const list = $('achievement-list');
-    list.innerHTML = ACHIEVEMENTS.map(a => {
-      const got = !!state.achievements[a.id];
-      return `<div class="ach-item ${got ? 'unlocked' : 'locked'}">
-        <div class="ach-item-icon">${a.icon}</div>
-        <div class="ach-item-text">
-          <div class="ach-item-name">${a.name} ${got ? '✅' : '🔒'}</div>
-          <div class="ach-item-desc">${a.desc}</div>
-        </div>
-      </div>`;
-    }).join('');
+    const pct = Math.round((unlocked / ACHIEVEMENTS.length) * 100);
+    $('achievement-stats').innerHTML = `已解锁 <b>${unlocked}</b> / ${ACHIEVEMENTS.length} 个成就 · 完成度 <b>${pct}%</b>
+      <div class="ach-total-bar"><div class="ach-total-fill" style="width:${pct}%"></div></div>`;
+
+    // 按分类分组
+    const cats = {};
+    ACHIEVEMENTS.forEach(a => { (cats[a.cat] = cats[a.cat] || []).push(a); });
+
+    const catIcons = { '答题': '📝', '连击': '⚡', '等级': '📈', '打卡': '📅', '综合': '🏆' };
+    let html = '';
+    for (const cat in cats) {
+      const items = cats[cat];
+      const catUnlocked = items.filter(a => state.achievements[a.id]).length;
+      html += `<div class="ach-cat-header">${catIcons[cat] || ''} ${cat} <span class="ach-cat-count">${catUnlocked}/${items.length}</span></div>`;
+      items.forEach(a => {
+        const got = !!state.achievements[a.id];
+        const progStr = a.progress ? a.progress() : '';
+        const progParts = progStr ? progStr.split('/') : null;
+        const progPct = progParts ? Math.min(100, Math.round((parseInt(progParts[0]) / parseInt(progParts[1])) * 100)) : 0;
+        const unlockDate = got ? new Date(state.achievements[a.id]).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' }) : '';
+        html += `<div class="ach-item ${got ? 'unlocked' : 'locked'}">
+          <div class="ach-item-icon ${got ? '' : 'grayscale'}">${a.icon}</div>
+          <div class="ach-item-text">
+            <div class="ach-item-name">${a.name} ${got ? '✅' : '🔒'}</div>
+            <div class="ach-item-desc">${a.desc}</div>
+            ${progParts && !got ? `<div class="ach-progress-bar"><div class="ach-progress-fill" style="width:${progPct}%"></div></div><div class="ach-progress-label">${progParts[0]} / ${progParts[1]}</div>` : ''}
+            ${got && unlockDate ? `<div class="ach-unlock-date">解锁于 ${unlockDate}</div>` : ''}
+          </div>
+        </div>`;
+      });
+    }
+    $('achievement-list').innerHTML = html;
     $('achievement-modal').style.display = 'flex';
   }
   function updateAchievementBadge() {
@@ -1804,6 +1837,7 @@
   function openHeatmapModal() {
     const container = $('heatmap-container');
     const today = new Date();
+    today.setHours(23, 59, 59, 999);
     const days = 365;
     const start = new Date(today);
     start.setDate(start.getDate() - days);
@@ -1812,26 +1846,81 @@
 
     const total = Object.values(state.studyLog).reduce((a, b) => a + b, 0);
     const activeDays = Object.keys(state.studyLog).length;
-    $('heatmap-summary').innerHTML = `累计刷题 <b>${total}</b> 题 · 活跃 <b>${activeDays}</b> 天`;
+    const allCounts = Object.values(state.studyLog);
+    const bestDay = allCounts.length > 0 ? Math.max(...allCounts) : 0;
+    const avgPerDay = activeDays > 0 ? Math.round(total / activeDays) : 0;
 
-    const weeks = Math.ceil((days + (new Date().getDay() + 1)) / 7);
-    let html = '<div class="heatmap-grid" style="grid-template-columns: repeat(' + weeks + ', 1fr);">';
+    // 计算最长连续天数
+    const sortedDates = Object.keys(state.studyLog).sort();
+    let maxStreak = 0;
+    let curStreak = 0;
+    let prevDate = null;
+    for (const ds of sortedDates) {
+      const d = new Date(ds);
+      if (prevDate) {
+        const diff = Math.round((d - prevDate) / 86400000);
+        if (diff === 1) curStreak++;
+        else curStreak = 1;
+      } else {
+        curStreak = 1;
+      }
+      if (curStreak > maxStreak) maxStreak = curStreak;
+      prevDate = d;
+    }
+
+    $('heatmap-summary').innerHTML = `
+      <div class="hm-stat-row">
+        <div class="hm-stat"><div class="hm-stat-val">${total}</div><div class="hm-stat-label">累计题数</div></div>
+        <div class="hm-stat"><div class="hm-stat-val">${activeDays}</div><div class="hm-stat-label">活跃天数</div></div>
+        <div class="hm-stat"><div class="hm-stat-val">${bestDay}</div><div class="hm-stat-label">最佳单日</div></div>
+        <div class="hm-stat"><div class="hm-stat-val">${avgPerDay}</div><div class="hm-stat-label">日均</div></div>
+        <div class="hm-stat"><div class="hm-stat-val">${maxStreak}</div><div class="hm-stat-label">最长连续</div></div>
+      </div>`;
+
+    const weeks = Math.ceil((days + (today.getDay() + 1)) / 7);
     const colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
+
+    // 月份标签
+    const todayStr = today.toISOString().slice(0, 10);
+    let monthLabels = '<div class="hm-month-row"><div class="hm-day-label-spacer"></div>';
+    let lastMonth = -1;
     const d = new Date(start);
+    for (let w = 0; w < weeks; w++) {
+      const m = d.getMonth();
+      if (m !== lastMonth) {
+        monthLabels += `<div class="hm-month-label">${m + 1}月</div>`;
+        lastMonth = m;
+      } else {
+        monthLabels += '<div class="hm-month-label"></div>';
+      }
+      d.setDate(d.getDate() + 7);
+    }
+    monthLabels += '</div>';
+
+    // 主网格（带星期标签）
+    let html = '<div class="hm-wrap">' + monthLabels;
+    html += '<div class="hm-grid-row"><div class="hm-day-labels">';
+    const dayLabels = ['日', '', '二', '', '四', '', '六'];
+    for (const dl of dayLabels) html += `<div class="hm-day-label">${dl}</div>`;
+    html += '</div><div class="heatmap-grid" style="grid-template-columns: repeat(' + weeks + ', 1fr);">';
+
+    const d2 = new Date(start);
     for (let i = 0; i < weeks * 7; i++) {
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = d2.toISOString().slice(0, 10);
       const count = state.studyLog[dateStr] || 0;
-      const isFuture = d > today;
+      const isFuture = d2 > today;
+      const isToday = dateStr === todayStr;
       let color = '#ebedf0';
       if (count > 0 && !isFuture) {
         const idx = Math.min(4, Math.ceil(count / 5));
         color = colors[idx];
       }
       const title = isFuture ? '' : `${dateStr}: ${count} 题`;
-      html += `<div class="heatmap-cell" style="background:${color};" title="${title}"></div>`;
-      d.setDate(d.getDate() + 1);
+      const cls = 'heatmap-cell' + (isToday ? ' today' : '') + (isFuture ? ' future' : '');
+      html += `<div class="${cls}" style="background:${color};" title="${title}"></div>`;
+      d2.setDate(d2.getDate() + 1);
     }
-    html += '</div>';
+    html += '</div></div></div>';
     container.innerHTML = html;
     $('heatmap-modal').style.display = 'flex';
   }

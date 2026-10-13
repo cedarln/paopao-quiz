@@ -1926,34 +1926,79 @@ body.custom-bg::before {
   text-align: center;
   font-size: 14px;
   color: var(--text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   font-weight: 600;
+}
+.achievement-stats b {
+  color: var(--primary);
+  font-size: 16px;
+}
+.ach-total-bar {
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+.ach-total-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #f59e0b, #f97316);
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+.ach-cat-header {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  padding: 8px 4px 4px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ach-cat-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 400;
 }
 .achievement-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  max-height: 50vh;
+  gap: 6px;
+  max-height: 55vh;
   overflow-y: auto;
 }
 .ach-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   padding: 12px;
   border-radius: 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
+  transition: transform 0.15s;
+}
+.ach-item:hover {
+  transform: translateX(2px);
 }
 .ach-item.unlocked {
   background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.08));
   border-color: rgba(245, 158, 11, 0.3);
 }
 .ach-item.locked {
-  opacity: 0.5;
+  opacity: 0.6;
 }
 .ach-item-icon {
   font-size: 28px;
+  line-height: 1;
+}
+.ach-item-icon.grayscale {
+  filter: grayscale(1) opacity(0.5);
+}
+.ach-item-text {
+  flex: 1;
+  min-width: 0;
 }
 .ach-item-name {
   font-size: 14px;
@@ -1963,35 +2008,120 @@ body.custom-bg::before {
 .ach-item-desc {
   font-size: 12px;
   color: var(--text-muted);
+  margin-top: 2px;
+}
+.ach-progress-bar {
+  height: 5px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.ach-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.ach-progress-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+.ach-unlock-date {
+  font-size: 10px;
+  color: #f59e0b;
+  margin-top: 3px;
+  font-weight: 600;
 }
 
 /* ===== 学习日历热力图 ===== */
 .heatmap-summary {
-  text-align: center;
-  font-size: 14px;
-  color: var(--text-muted);
   margin-bottom: 16px;
 }
-.heatmap-summary b {
+.hm-stat-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.hm-stat {
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 70px;
+}
+.hm-stat-val {
+  font-size: 22px;
+  font-weight: 800;
   color: var(--primary);
-  font-size: 16px;
+}
+.hm-stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 .heatmap-container {
   overflow-x: auto;
   padding-bottom: 8px;
+}
+.hm-wrap {
+  display: inline-block;
+}
+.hm-month-row {
+  display: flex;
+  align-items: flex-end;
+  margin-bottom: 4px;
+}
+.hm-day-label-spacer {
+  width: 20px;
+  flex-shrink: 0;
+}
+.hm-month-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: center;
+  min-width: 11px;
+}
+.hm-grid-row {
+  display: flex;
+  gap: 4px;
+}
+.hm-day-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 20px;
+  flex-shrink: 0;
+}
+.hm-day-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  height: 11px;
+  line-height: 11px;
+  text-align: right;
+  padding-right: 2px;
 }
 .heatmap-grid {
   display: grid;
   grid-auto-flow: column;
   grid-template-rows: repeat(7, 1fr);
   gap: 3px;
-  min-width: 100%;
 }
 .heatmap-cell {
   width: 11px;
   height: 11px;
   border-radius: 2px;
   flex-shrink: 0;
+}
+.heatmap-cell.today {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
+.heatmap-cell.future {
+  opacity: 0.3;
 }
 .heatmap-legend {
   display: flex;
