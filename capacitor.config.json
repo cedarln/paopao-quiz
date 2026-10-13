@@ -1,0 +1,11 @@
+{
+  "appId": "com.jiaoshi.quiz",
+  "appName": "泡泡题库",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "backgroundColor": "#f5f7fa"
+  }
+}
