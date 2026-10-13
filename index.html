@@ -19,7 +19,7 @@
     <section id="page-home" class="page active">
       <header class="app-header">
         <div class="header-content">
-          <h1 class="app-title">泡泡题库</h1>
+          <h1 id="app-title" class="app-title">泡泡题库</h1>
           <p class="app-subtitle">教师资格证考试 · 每日刷题 · 高效备考</p>
         </div>
         <div class="header-actions">
@@ -28,6 +28,10 @@
           <input type="file" id="bg-file-input" accept="image/*,video/*" style="display:none;">
         </div>
       </header>
+
+      <!-- 等级/打卡徽章 + 每日一言 -->
+      <div class="home-badges" id="home-badges"></div>
+      <div class="daily-quote" id="daily-quote"></div>
       <!-- 主题选择面板 -->
       <div id="theme-panel" class="theme-panel">
         <div class="panel-section-title">🎨 主题</div>
