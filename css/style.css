@@ -23,6 +23,54 @@
   --border: #e5e7eb;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --bg-overlay: rgba(255, 255, 255, 0.85);
+}
+
+/* 深色主题 */
+[data-theme="dark"] {
+  --primary: #818cf8;
+  --primary-light: #a5b4fc;
+  --primary-dark: #6366f1;
+  --success: #34d399;
+  --success-light: rgba(16, 185, 129, 0.2);
+  --error: #f87171;
+  --error-light: rgba(239, 68, 68, 0.2);
+  --warning: #fbbf24;
+  --bg: #0f172a;
+  --card-bg: #1e293b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --border: #334155;
+  --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --bg-overlay: rgba(15, 23, 42, 0.85);
+}
+
+/* 极光绿主题 */
+[data-theme="aurora"] {
+  --primary: #059669;
+  --primary-light: #10b981;
+  --primary-dark: #047857;
+  --bg: #ecfdf5;
+  --card-bg: #ffffff;
+  --text-primary: #064e3b;
+  --text-secondary: #047857;
+  --border: #a7f3d0;
+  --bg-overlay: rgba(236, 253, 245, 0.85);
+}
+
+/* 日落橙主题 */
+[data-theme="sunset"] {
+  --primary: #ea580c;
+  --primary-light: #f97316;
+  --primary-dark: #c2410c;
+  --bg: #fff7ed;
+  --card-bg: #ffffff;
+  --text-primary: #7c2d12;
+  --text-secondary: #c2410c;
+  --border: #fed7aa;
+  --bg-overlay: rgba(255, 247, 237, 0.85);
 }
 
 html, body {
@@ -32,17 +80,42 @@ html, body {
   color: var(--text-primary);
   background-color: var(--bg);
   overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 body {
   min-height: 100vh;
   min-height: 100dvh;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+/* 自定义背景遮罩 */
+body.custom-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  z-index: 0;
+  backdrop-filter: blur(2px);
+}
+
+#bg-video {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
 }
 
 #app {
   min-height: 100vh;
   min-height: 100dvh;
   position: relative;
+  z-index: 1;
 }
 
 .page {
@@ -65,10 +138,27 @@ body {
   border-bottom-left-radius: 24px;
   border-bottom-right-radius: 24px;
   box-shadow: 0 4px 20px rgba(79, 70, 229, 0.25);
+  position: relative;
 }
 
 .header-content {
   text-align: center;
+}
+
+.header-actions {
+  position: absolute;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 16px;
+  display: flex;
+  gap: 8px;
+}
+
+.header-actions .theme-toggle,
+.header-actions .bg-upload-btn {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  backdrop-filter: blur(4px);
 }
 
 .app-title {
@@ -123,20 +213,49 @@ body {
   box-shadow: var(--shadow);
   border: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease, border-color 0.25s ease;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  position: relative;
+  overflow: hidden;
+}
+
+.subject-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+
+.subject-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.subject-card:hover::before {
+  left: 100%;
 }
 
 .subject-card:active {
-  transform: scale(0.97);
+  transform: scale(0.95);
 }
 
 .subject-card.selected {
   border-color: var(--primary);
   background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.2);
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.25);
+  animation: cardPulse 0.4s ease;
+}
+
+@keyframes cardPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
 }
 
 .subject-icon {
@@ -1326,5 +1445,220 @@ body {
   margin: 12px 0;
   line-height: 1.5;
 }
+
+/* ===== 炫酷交互动画 ===== */
+
+/* 按钮通用发光与按压效果 */
+.start-btn:not(:disabled),
+.exam-start-btn:not(:disabled),
+.import-btn {
+  position: relative;
+  overflow: hidden;
+}
+
+.start-btn:not(:disabled)::after,
+.exam-start-btn:not(:disabled)::after,
+.import-btn::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.5s ease, height 0.5s ease;
+}
+
+.start-btn:not(:disabled):active::after,
+.exam-start-btn:not(:disabled):active::after,
+.import-btn:active::after {
+  width: 300px;
+  height: 300px;
+}
+
+/* 选项悬浮动画 */
+.option-item {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.option-item:hover {
+  transform: translateX(6px);
+  box-shadow: var(--shadow);
+}
+
+.option-item.correct {
+  animation: correctPop 0.4s ease;
+}
+
+.option-item.wrong {
+  animation: wrongShake 0.4s ease;
+}
+
+@keyframes correctPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes wrongShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+/* 页面切换淡入 */
+.page.active {
+  animation: pageFadeIn 0.35s ease;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 题目出现动画 */
+.question-card {
+  animation: questionSlideIn 0.3s ease;
+}
+
+@keyframes questionSlideIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* 头部主题切换按钮 */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.3s ease, background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-toggle:hover {
+  transform: rotate(30deg) scale(1.1);
+  background: var(--card-bg);
+}
+
+/* 主题选择面板 */
+.theme-panel {
+  position: fixed;
+  top: 60px;
+  right: 16px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow-lg);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 160px;
+}
+
+.theme-panel.show {
+  display: flex;
+  animation: pageFadeIn 0.2s ease;
+}
+
+.theme-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 14px;
+}
+
+.theme-option:hover {
+  background: var(--bg);
+}
+
+.theme-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* 搜索框 */
+.search-box {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 14px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-box:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+}
+
+/* 分类筛选标签 */
+.category-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.category-chip {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.category-chip.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+/* 背景上传按钮 */
+.bg-upload-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bg-upload-btn:hover {
+  transform: scale(1.15);
+}
+
 
 

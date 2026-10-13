@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <!-- 自定义背景视频 -->
+  <video id="bg-video" autoplay muted loop playsinline style="display:none;"></video>
+
   <div id="app">
     <!-- 首页：科目选择 -->
     <section id="page-home" class="page active">
@@ -17,14 +20,52 @@
           <h1 class="app-title">泡泡题库</h1>
           <p class="app-subtitle">教师资格证考试 · 每日刷题 · 高效备考</p>
         </div>
+        <div class="header-actions">
+          <button id="bg-upload-btn" class="bg-upload-btn" title="自定义背景">🖼️</button>
+          <button id="theme-toggle" class="theme-toggle" title="切换主题">🌙</button>
+          <input type="file" id="bg-file-input" accept="image/*,video/*" style="display:none;">
+        </div>
       </header>
+      <!-- 主题选择面板 -->
+      <div id="theme-panel" class="theme-panel">
+        <div class="theme-option" data-theme="light">
+          <span class="theme-swatch" style="background:#ffffff;border-color:#e5e7eb;"></span>
+          <span>☀️ 浅色</span>
+        </div>
+        <div class="theme-option" data-theme="dark">
+          <span class="theme-swatch" style="background:#0f172a;border-color:#334155;"></span>
+          <span>🌙 深色</span>
+        </div>
+        <div class="theme-option" data-theme="aurora">
+          <span class="theme-swatch" style="background:#059669;"></span>
+          <span>🌿 极光绿</span>
+        </div>
+        <div class="theme-option" data-theme="sunset">
+          <span class="theme-swatch" style="background:#ea580c;"></span>
+          <span>🌅 日落橙</span>
+        </div>
+        <div class="theme-option" id="bg-reset-btn" style="border-top:1px solid var(--border);margin-top:4px;padding-top:12px;">
+          <span>🔄 恢复默认背景</span>
+        </div>
+      </div>
       <main class="home-content">
         <div class="section-title">
           <span class="section-icon">📚</span>
           <h2>选择课程</h2>
         </div>
+        <!-- 搜索框 -->
+        <input type="text" id="subject-search" class="search-box" placeholder="🔍 搜索课程名称...">
         <div id="subject-list" class="subject-list">
           <!-- 科目卡片由 JS 渲染 -->
+        </div>
+
+        <!-- 分类筛选 -->
+        <div id="category-section" style="display:none;">
+          <div class="section-title" style="margin-top:16px;">
+            <span class="section-icon">🏷️</span>
+            <h2>分类筛选</h2>
+          </div>
+          <div id="category-chips" class="category-chips"></div>
         </div>
 
         <!-- 导入题库按钮 -->
