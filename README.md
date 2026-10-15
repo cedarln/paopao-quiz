@@ -12,7 +12,9 @@
 
 ### v1.2.0（2026-10-13）
 
-> 📥 **下载 APK**：[泡泡题库 v1.2.0](https://gofile.io/d/Ppe2DTVF)
+> 📥 **下载 APK**：[paopao-quiz-v1.2.0.apk](https://github.com/cedarln/paopao-quiz/releases/download/v1.2.0/paopao-quiz-v1.2.0.apk)
+>
+> 也可在 [Releases 页面](https://github.com/cedarln/paopao-quiz/releases/tag/v1.2.0) 查看。
 
 - 文件大小：4.1 MB
 - MD5：`b3de340e78eb4bd7a87d0d75fb3a1669`
