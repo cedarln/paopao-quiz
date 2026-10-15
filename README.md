@@ -4,7 +4,32 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.0.0-orange)
+![Version](https://img.shields.io/badge/version-1.2.0-orange)
+
+---
+
+## 📦 Releases
+
+### v1.2.0（2026-10-13）
+
+> 📥 **下载 APK**：[泡泡题库 v1.2.0](https://gofile.io/d/Ppe2DTVF)
+
+- 文件大小：4.1 MB
+- MD5：`b3de340e78eb4bd7a87d0d75fb3a1669`
+
+**本次更新**
+- ✅ 新增 **错题本**：答错题目自动收集，支持错题再练、单题移除、一键清空
+- ✅ 新增 **模拟考试**：可配置题量与时长，限时答题，交卷统一判分
+- ✅ 新增 **题库导入**：支持 JSON 配置文件导入英语/日语等自定义题库，同主题可覆盖/追加
+- ✅ 新增 **回收站**：所有卡片支持删除，误删可恢复或彻底删除
+
+### v1.0.0（初始版本）
+
+- 7 个内置教资科目题库
+- 顺序/随机刷题模式，即时答案反馈与解析
+- 4 套主题切换 + 自定义图片/视频背景
+- 分类筛选与课程搜索
+- 学习统计（累计答题数、正确率、连续打卡）
 
 ---
 
