@@ -128,4 +128,57 @@ public class UpdatePlugin extends Plugin {
         ret.put("started", started);
         call.resolve(ret);
     }
+
+    /**
+     * 列出已下载的更新包，附版本号与「是否已装完」标记：
+     * installedOrOlder = 安装包版本 <= 当前安装版本（或解析失败），即已经装过/损坏，可提示删除；
+     * 否则是下载了但还没装的，可以提示继续安装。
+     */
+    @PluginMethod
+    public void listDownloadedUpdates(final PluginCall call) {
+        File dir = UpdateChecker.updateDir(getContext());
+        com.getcapacitor.JSArray arr = new com.getcapacitor.JSArray();
+        String current = UpdateChecker.currentVersion(getContext());
+        if (dir.exists() && dir.isDirectory()) {
+            File[] files = dir.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    if (!f.getName().toLowerCase().endsWith(".apk") || f.length() == 0) continue;
+                    String ver = UpdateChecker.archiveVersion(getContext(), f);
+                    JSObject item = new JSObject();
+                    item.put("fileName", f.getName());
+                    item.put("size", f.length());
+                    item.put("version", ver == null ? "" : ver);
+                    boolean installedOrOlder;
+                    if (ver == null || ver.isEmpty()) {
+                        installedOrOlder = true; // 解析失败 = 损坏文件，按可清理处理
+                    } else {
+                        installedOrOlder = UpdateChecker.compareVersions(
+                                UpdateChecker.normalizeVersion(ver),
+                                UpdateChecker.normalizeVersion(current)) <= 0;
+                    }
+                    item.put("installedOrOlder", installedOrOlder);
+                    arr.put(item);
+                }
+            }
+        }
+        JSObject ret = new JSObject();
+        ret.put("files", arr);
+        call.resolve(ret);
+    }
+
+    /** 删除一个已下载的更新包 */
+    @PluginMethod
+    public void deleteUpdateFile(final PluginCall call) {
+        String fileName = call.getString("fileName", "");
+        if (fileName.isEmpty() || fileName.contains("/") || fileName.contains("..")) {
+            call.reject("非法的文件名");
+            return;
+        }
+        File apk = UpdateChecker.downloadedFile(getContext(), fileName);
+        boolean deleted = apk.exists() && apk.delete();
+        JSObject ret = new JSObject();
+        ret.put("deleted", deleted);
+        call.resolve(ret);
+    }
 }
