@@ -12,10 +12,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 /**
  * 检查更新的 Capacitor 桥：把 UpdateChecker 的能力暴露给 WebView 里的 JS。
  *
- * JS 侧（window.Capacitor.Plugins.UpdateChecker）：
- *   - checkUpdate()            -> { hasUpdate, current, tag, version, size, url, notes }
- *   - startDownload(url)       -> { fileName, downloadId }，进度通过 "progress" 事件推送
- *   - installApk(fileName)     -> { started }（false = 需要先去开「安装未知应用」权限）
+ * JS 侧（通过注入运行时的底层桥 cap.nativePromise('UpdateChecker', ...) 调用）：
+ *   - checkUpdate()                     -> { hasUpdate, current, tag, version, size, url, notes }
+ *   - startDownload(url)                -> { fileName, downloadId }
+ *   - downloadProgress(downloadId)      -> { status, percent, downloaded, total }（JS 轮询用）
+ *   - installApk(fileName)              -> { started }（false = 需要先去开「安装未知应用」权限）
  */
 @CapacitorPlugin(name = "UpdateChecker")
 public class UpdatePlugin extends Plugin {
@@ -109,6 +110,31 @@ public class UpdatePlugin extends Plugin {
                 }
             }
         }).start();
+    }
+
+    /**
+     * 查询某个下载任务的进度（JS 轮询用；纯 HTML 应用拿不到插件事件监听，
+     * 所以进度不走 notifyListeners 推送，改由 JS 侧定时调用本方法）。
+     * status: 8 = STATUS_SUCCESSFUL，16 = STATUS_FAILED，其他为进行中。
+     */
+    @PluginMethod
+    public void downloadProgress(final PluginCall call) {
+        Double idObj = call.getDouble("downloadId");
+        if (idObj == null || idObj < 0) {
+            call.reject("缺少 downloadId 参数");
+            return;
+        }
+        UpdateChecker.DownloadProgress p = UpdateChecker.queryDownload(getContext(), idObj.longValue());
+        if (p == null) {
+            call.reject("下载任务不存在或已被清理");
+            return;
+        }
+        JSObject ret = new JSObject();
+        ret.put("status", p.status);
+        ret.put("percent", p.total > 0 ? (int) (p.downloaded * 100 / p.total) : 0);
+        ret.put("downloaded", p.downloaded);
+        ret.put("total", p.total);
+        call.resolve(ret);
     }
 
     @PluginMethod

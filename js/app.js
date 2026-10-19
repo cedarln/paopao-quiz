@@ -2125,7 +2125,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.6';
+  const APP_VERSION = '1.3.7';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2140,19 +2140,17 @@
     } catch (e) { return false; }
   };
 
-  const getUpdatePlugin = () => {
-    try {
-      if (isNativeApp() && window.Capacitor) {
-        let p = window.Capacitor.Plugins && window.Capacitor.Plugins.UpdateChecker;
-        // 某些设备/版本上 Plugins 代理可能缺失：用注入的 registerPlugin 现场补一个
-        if (!p && typeof window.Capacitor.registerPlugin === 'function') {
-          try { p = window.Capacitor.registerPlugin('UpdateChecker'); } catch (e) { p = null; }
-        }
-        if (p) return p;
-      }
-    } catch (e) {}
-    return null;
-  };
+  // 直接走 Capacitor 注入运行时的底层桥（nativePromise）调用原生更新插件。
+  // 关键：window.Capacitor.Plugins 只有在应用 JS 里打包了 @capacitor/core 并
+  // 调用 registerPlugin() 后才会填充；纯 HTML 应用（无打包器）里它永远是空的，
+  // 所以不能用 window.Capacitor.Plugins.UpdateChecker（v1.3.6 之前的问题根源）。
+  function nativeUpdateCall(method, args) {
+    const cap = window.Capacitor;
+    if (cap && typeof cap.nativePromise === 'function') {
+      return cap.nativePromise('UpdateChecker', method, args || {});
+    }
+    return Promise.reject(new Error('应用内更新组件不可用'));
+  }
 
   // 用系统浏览器下载 APK：绝不在应用内 WebView 里打开 GitHub 页面
   // （Capacitor 会把外部 URL 转交给系统浏览器；纯浏览器环境用新标签页）
@@ -2230,60 +2228,75 @@
     }
   }
 
-  // App 内下载 + 自动拉起安装
+  // App 内下载 + 自动拉起安装；进度不靠插件事件（纯 HTML 应用监听不到），
+  // 而是 JS 每 700ms 轮询一次原生 downloadProgress
   function startNativeDownload(latest, apkUrl) {
-    const plugin = getUpdatePlugin();
-    if (!plugin) {
-      // 原生环境但拿不到更新插件：直接交给系统浏览器，不在应用内打开 GitHub
-      browserDownloadUpdate(apkUrl);
-      return;
-    }
     setUpdateModalBusy(true);
     $('update-progress').style.display = 'block';
-
-    plugin.startDownload({ url: apkUrl }).catch(err => {
+    nativeUpdateCall('startDownload', { url: apkUrl }).then(res => {
+      if (!res || !res.fileName) throw new Error('下载任务创建失败');
+      pollDownload(res.fileName, res.downloadId);
+    }).catch(err => {
       setUpdateModalBusy(false);
       $('update-progress').style.display = 'none';
+      if (err && err.message === '应用内更新组件不可用') {
+        // 原生环境但拿不到更新桥：直接交给系统浏览器，不在应用内打开 GitHub
+        browserDownloadUpdate(apkUrl);
+        return;
+      }
       showToast('下载失败：' + (err && err.message ? err.message : '未知错误'));
       showBrowserFallback();
     });
   }
 
-  let updateProgressBound = false;
+  // 轮询下载进度：status 8 = DownloadManager.STATUS_SUCCESSFUL，16 = STATUS_FAILED
+  function pollDownload(fileName, downloadId) {
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 20 * 60 * 1000; // 20 分钟没下完就建议换浏览器
+    const timer = setInterval(() => {
+      nativeUpdateCall('downloadProgress', { downloadId: downloadId }).then(p => {
+        const fill = $('update-progress-fill');
+        if (fill && p.total > 0) {
+          fill.style.width = p.percent + '%';
+          $('update-progress-text').textContent =
+            p.percent + '% · ' + formatSize(p.downloaded) + '/' + formatSize(p.total);
+        }
+        if (p.status === 8) {
+          clearInterval(timer);
+          setUpdateModalBusy(false);
+          $('update-progress').style.display = 'none';
+          showToast('下载完成，正在拉起安装…');
+          tryInstall(fileName);
+        } else if (p.status === 16) {
+          clearInterval(timer);
+          setUpdateModalBusy(false);
+          $('update-progress').style.display = 'none';
+          showToast('下载失败，请检查网络后重试');
+          showBrowserFallback();
+        } else if (Date.now() - startedAt > TIMEOUT_MS) {
+          clearInterval(timer);
+          setUpdateModalBusy(false);
+          $('update-progress').style.display = 'none';
+          showToast('下载超时，建议改用系统浏览器下载');
+          showBrowserFallback();
+        }
+      }).catch(() => {
+        clearInterval(timer);
+        setUpdateModalBusy(false);
+        $('update-progress').style.display = 'none';
+        showToast('无法获取下载进度，请改用系统浏览器');
+        showBrowserFallback();
+      });
+    }, 700);
+  }
+
   // 等待安装的更新包文件名（权限授权后回到 App 自动继续安装）
   const PENDING_INSTALL_STORAGE = 'quiz-pending-install';
 
-  function bindUpdateProgressListeners() {
-    const plugin = getUpdatePlugin();
-    if (!plugin || updateProgressBound) return;
-    updateProgressBound = true; // 只绑一次，避免重复监听
-
-    plugin.addListener('progress', (data) => {
-      const fill = $('update-progress-fill');
-      if (!fill) return;
-      fill.style.width = data.percent + '%';
-      $('update-progress-text').textContent =
-        data.percent + '%' + (data.total > 0 ? ' · ' + formatSize(data.downloaded) + '/' + formatSize(data.total) : '');
-    });
-    plugin.addListener('finished', (data) => {
-      setUpdateModalBusy(false);
-      $('update-progress').style.display = 'none';
-      showToast('下载完成，正在拉起安装…');
-      tryInstall(data.fileName);
-    });
-    plugin.addListener('failed', () => {
-      setUpdateModalBusy(false);
-      $('update-progress').style.display = 'none';
-      showToast('下载失败，请检查网络后重试');
-      showBrowserFallback();
-    });
-  }
-
   // 主动拉起安装器；需要「安装未知应用」权限时记录待安装文件，授权回来后自动继续
   function tryInstall(fileName) {
-    const plugin = getUpdatePlugin();
-    if (!plugin || !fileName) return;
-    plugin.installApk({ fileName: fileName }).then(res => {
+    if (!fileName) return;
+    nativeUpdateCall('installApk', { fileName: fileName }).then(res => {
       if (res.started) {
         localStorage.removeItem(PENDING_INSTALL_STORAGE);
         $('update-modal').style.display = 'none';
@@ -2310,9 +2323,7 @@
       if (document.visibilityState !== 'visible') return;
       const pending = localStorage.getItem(PENDING_INSTALL_STORAGE);
       if (!pending) return;
-      const plugin = getUpdatePlugin();
-      if (!plugin) return;
-      plugin.installApk({ fileName: pending }).then(res => {
+      nativeUpdateCall('installApk', { fileName: pending }).then(res => {
         if (res.started) {
           localStorage.removeItem(PENDING_INSTALL_STORAGE);
           $('update-modal').style.display = 'none';
@@ -2349,9 +2360,8 @@
   }
 
   function checkLeftoverUpdates() {
-    const plugin = getUpdatePlugin();
-    if (!plugin) return;
-    plugin.listDownloadedUpdates().then(res => {
+    if (!isNativeApp()) return;
+    nativeUpdateCall('listDownloadedUpdates').then(res => {
       const files = res.files || [];
       if (!files.length) return;
       const installed = files.find(f => f.installedOrOlder);
@@ -2359,7 +2369,7 @@
         showCleanupModal('🧹', '清理更新包',
           `上次下载的更新包（v${installed.version || '?'}，${formatSize(installed.size)}）看起来已经安装完成，要删除它以释放空间吗？`,
           '删除', () => {
-            plugin.deleteUpdateFile({ fileName: installed.fileName }).catch(() => {});
+            nativeUpdateCall('deleteUpdateFile', { fileName: installed.fileName }).catch(() => {});
           });
       } else {
         const pending = files[0];
@@ -2373,43 +2383,44 @@
   }
 
   function checkForUpdate() {
-    const plugin = getUpdatePlugin();
-    if (plugin) {
-      bindUpdateProgressListeners();
+    if (isNativeApp()) {
       showToast('正在检查更新…');
-      plugin.checkUpdate().then(res => {
+      nativeUpdateCall('checkUpdate').then(res => {
         if (res.hasUpdate) {
           openUpdateModal(res, res.current, res.url);
         } else {
           showToast(`已是最新版本（v${res.current}）`);
         }
       }).catch(err => {
-        showToast(err && err.message ? err.message : '检查更新失败');
+        // 原生检查失败（网络受限或组件缺失）→ 退回网页兜底（只走系统浏览器）
+        checkForUpdateViaWeb(err && err.message ? err.message : '未知错误');
       });
     } else {
-      // 兜底：查 GitHub API，有新版就交给系统浏览器下载（绝不在应用内打开 GitHub）
-      showToast('正在检查更新…');
-      if (window.Capacitor && !plugin) {
-        // 原生环境但应用内更新组件不可用：提示并降级到系统浏览器
-        showToast('应用内更新组件不可用，将改用系统浏览器下载');
-      }
-      fetch(API_LATEST).then(r => {
-        if (!r.ok) throw new Error('GitHub API 返回 ' + r.status);
-        return r.json();
-      }).then(rel => {
-        if (compareVersions(normalizeVersion(rel.tag_name), APP_VERSION) > 0) {
-          const asset = (rel.assets || []).find(a => a.name.toLowerCase().endsWith('.apk'));
-          if (!asset) throw new Error('最新 Release 里没有 APK 文件');
-          if (confirm(`发现新版本 v${normalizeVersion(rel.tag_name)}（当前 v${APP_VERSION}），是否前往下载？`)) {
-            browserDownloadUpdate(asset.browser_download_url);
-          }
-        } else {
-          showToast(`已是最新版本（v${APP_VERSION}）`);
-        }
-      }).catch(err => {
-        showToast('检查更新失败：' + err.message);
-      });
+      checkForUpdateViaWeb('');
     }
+  }
+
+  function checkForUpdateViaWeb(reason) {
+    showToast('正在检查更新…');
+    if (reason && window.Capacitor) {
+      showToast('应用内更新不可用（' + reason + '），将改用系统浏览器下载');
+    }
+    fetch(API_LATEST).then(r => {
+      if (!r.ok) throw new Error('GitHub API 返回 ' + r.status);
+      return r.json();
+    }).then(rel => {
+      if (compareVersions(normalizeVersion(rel.tag_name), APP_VERSION) > 0) {
+        const asset = (rel.assets || []).find(a => a.name.toLowerCase().endsWith('.apk'));
+        if (!asset) throw new Error('最新 Release 里没有 APK 文件');
+        if (confirm(`发现新版本 v${normalizeVersion(rel.tag_name)}（当前 v${APP_VERSION}），是否前往下载？`)) {
+          browserDownloadUpdate(asset.browser_download_url);
+        }
+      } else {
+        showToast(`已是最新版本（v${APP_VERSION}）`);
+      }
+    }).catch(err => {
+      showToast('检查更新失败：' + err.message);
+    });
   }
 
   // ===== 传送门：在线题库广场 =====
