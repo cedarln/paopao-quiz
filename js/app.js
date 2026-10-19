@@ -1461,8 +1461,17 @@
   }
 
   function toggleThemePanel() {
-    const panel = $('theme-panel');
-    panel.classList.toggle('show');
+    // 🌙 专职主题面板；打开主题时收起背景面板，两个面板互斥
+    const bgPanel = $('bg-panel');
+    if (bgPanel) bgPanel.classList.remove('show');
+    $('theme-panel').classList.toggle('show');
+  }
+
+  function toggleBgPanel() {
+    // 🖼️ 专职背景面板；打开背景时收起主题面板
+    $('theme-panel').classList.remove('show');
+    const bgPanel = $('bg-panel');
+    if (bgPanel) bgPanel.classList.toggle('show');
   }
 
   // ===== 自定义背景 =====
@@ -1697,9 +1706,9 @@
 
   // 事件绑定入口
   function bindUxEvents() {
-    // 主题（🌙 和 🖼️ 都打开主题/背景面板；🖼️ 原先漏绑了点击事件，点了只有波纹动画）
+    // 主题（🌙）与背景（🖼️）各司其职，分别打开自己的面板
     $('theme-toggle').addEventListener('click', toggleThemePanel);
-    $('bg-upload-btn').addEventListener('click', toggleThemePanel);
+    $('bg-upload-btn').addEventListener('click', toggleBgPanel);
     document.querySelectorAll('.theme-option[data-theme]').forEach(opt => {
       opt.addEventListener('click', () => {
         applyTheme(opt.dataset.theme);
@@ -1710,13 +1719,17 @@
     document.querySelectorAll('.theme-option[data-bg]').forEach(opt => {
       opt.addEventListener('click', () => {
         setBackgroundType(opt.dataset.bg);
-        $('theme-panel').classList.remove('show');
+        $('bg-panel').classList.remove('show');
       });
     });
     document.addEventListener('click', (e) => {
-      const panel = $('theme-panel');
-      if (!panel.contains(e.target) && e.target.id !== 'theme-toggle' && e.target.id !== 'bg-upload-btn') {
-        panel.classList.remove('show');
+      const tp = $('theme-panel');
+      const bp = $('bg-panel');
+      if (tp && !tp.contains(e.target) && e.target.id !== 'theme-toggle') {
+        tp.classList.remove('show');
+      }
+      if (bp && !bp.contains(e.target) && e.target.id !== 'bg-upload-btn') {
+        bp.classList.remove('show');
       }
     });
 
@@ -1728,7 +1741,7 @@
     });
     $('bg-reset-btn').addEventListener('click', () => {
       resetBackground();
-      $('theme-panel').classList.remove('show');
+      $('bg-panel').classList.remove('show');
     });
 
     // 搜索
@@ -2063,7 +2076,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.3';
+  const APP_VERSION = '1.3.4';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
