@@ -1165,10 +1165,16 @@ body.custom-bg::before {
 }
 
 .action-row {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  /* 7 个按钮：两列四行，最后一行（回收站）通栏 */
+  grid-template-columns: repeat(2, 1fr);
   gap: 10px;
+}
+
+.action-row .import-btn {
   justify-content: center;
+  position: relative;
+  width: 100%;
 }
 
 .import-btn {
@@ -1288,6 +1294,17 @@ body.custom-bg::before {
 
 .modal-content {
   background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.2s ease-out;
+}
+
+/* 成就 / 学习日历 / 收藏夹弹窗用的容器类（此前未定义样式，内容透明看不清） */
+.modal {
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 24px;
   width: 100%;
@@ -2161,6 +2178,11 @@ body.custom-bg::before {
 .achievement-btn { background: linear-gradient(135deg, #f59e0b, #d97706); }
 .heatmap-btn { background: linear-gradient(135deg, #10b981, #059669); }
 .favorites-btn { background: linear-gradient(135deg, #ec4899, #db2777); }
+
+/* 回收站通栏占满两列 */
+.action-row .recycle-btn {
+  grid-column: 1 / -1;
+}
 
 
 /* ===== 传送门 · 在线题库广场 ===== */
