@@ -2058,6 +2058,308 @@
     });
   }
 
+  // ===== 检查更新 =====
+  // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
+  // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
+  // 浏览器里打开时退化为「跳转浏览器下载 APK」。
+  const APP_VERSION = '1.3.0';
+  const GITHUB_OWNER = 'cedarln';
+  const GITHUB_REPO = 'paopao-quiz';
+  const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
+
+  // 传送门：在线题库广场，题库 JSON 存放在仓库的 quizzes/ 目录
+  const PORTAL_API = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/quizzes';
+  const PORTAL_LOADED_STORAGE = 'quiz-portal-loaded';
+
+  const isNativeApp = () =>
+    !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+
+  const getUpdatePlugin = () => {
+    if (isNativeApp() && window.Capacitor.Plugins && window.Capacitor.Plugins.UpdateChecker) {
+      return window.Capacitor.Plugins.UpdateChecker;
+    }
+    return null;
+  };
+
+  // "v1.2.3" -> "1.2.3"
+  function normalizeVersion(tag) {
+    const m = String(tag || '').match(/(\d+(\.\d+)*)/);
+    return m ? m[1] : '';
+  }
+
+  // 按数字段比较版本：>0 表示 a 更新
+  function compareVersions(a, b) {
+    const pa = String(a || '').split('.').map(n => parseInt(n, 10) || 0);
+    const pb = String(b || '').split('.').map(n => parseInt(n, 10) || 0);
+    for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+      const x = pa[i] || 0, y = pb[i] || 0;
+      if (x !== y) return x - y;
+    }
+    return 0;
+  }
+
+  function formatSize(bytes) {
+    if (!bytes && bytes !== 0) return '';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  function setUpdateModalBusy(busy) {
+    $('update-now-btn').disabled = busy;
+    $('update-later-btn').disabled = busy;
+    $('update-now-btn').textContent = busy ? '下载中…' : '立即更新';
+  }
+
+  function openUpdateModal(latest, current, apkUrl) {
+    $('update-modal-icon').textContent = '🎉';
+    $('update-modal-title').textContent = '发现新版本 v' + normalizeVersion(latest.tag);
+    $('update-modal-desc').textContent =
+      `当前版本 v${current}，最新版本 v${normalizeVersion(latest.tag)}（${formatSize(latest.size)}）`;
+    const notes = $('update-notes');
+    if (latest.notes) {
+      // Release 说明按 markdown 写的，这里做个最朴素的渲染：去掉 # 标记，保留换行
+      notes.textContent = latest.notes.replace(/^#{1,6}\s*/gm, '').trim();
+      notes.style.display = 'block';
+    } else {
+      notes.textContent = '';
+      notes.style.display = 'none';
+    }
+    $('update-progress').style.display = 'none';
+    $('update-progress-fill').style.width = '0%';
+    $('update-progress-text').textContent = '0%';
+    setUpdateModalBusy(false);
+    $('update-now-btn').onclick = () => startNativeDownload(latest, apkUrl);
+    $('update-modal').style.display = 'flex';
+  }
+
+  // App 内下载 + 自动拉起安装
+  function startNativeDownload(latest, apkUrl) {
+    const plugin = getUpdatePlugin();
+    if (!plugin) return;
+    setUpdateModalBusy(true);
+    $('update-progress').style.display = 'block';
+
+    plugin.startDownload({ url: apkUrl }).catch(err => {
+      setUpdateModalBusy(false);
+      showToast('下载失败：' + (err && err.message ? err.message : '未知错误'));
+    });
+  }
+
+  let updateProgressBound = false;
+
+  function bindUpdateProgressListeners() {
+    const plugin = getUpdatePlugin();
+    if (!plugin || updateProgressBound) return;
+    updateProgressBound = true; // 只绑一次，避免重复监听
+
+    plugin.addListener('progress', (data) => {
+      const fill = $('update-progress-fill');
+      if (!fill) return;
+      fill.style.width = data.percent + '%';
+      $('update-progress-text').textContent = data.percent + '%';
+    });
+    plugin.addListener('finished', (data) => {
+      setUpdateModalBusy(false);
+      $('update-progress').style.display = 'none';
+      showToast('下载完成，正在拉起安装…');
+      plugin.installApk({ fileName: data.fileName }).then(res => {
+        if (!res.started) {
+          showToast('请先允许「安装未知应用」，返回后再点一次更新');
+        }
+        $('update-modal').style.display = 'none';
+      }).catch(err => {
+        showToast('安装失败：' + (err && err.message ? err.message : '未知错误'));
+      });
+    });
+    plugin.addListener('failed', () => {
+      setUpdateModalBusy(false);
+      $('update-progress').style.display = 'none';
+      showToast('下载失败，请检查网络后重试');
+    });
+  }
+
+  function checkForUpdate() {
+    const plugin = getUpdatePlugin();
+    if (plugin) {
+      bindUpdateProgressListeners();
+      showToast('正在检查更新…');
+      plugin.checkUpdate().then(res => {
+        if (res.hasUpdate) {
+          openUpdateModal(res, res.current, res.url);
+        } else {
+          showToast(`已是最新版本（v${res.current}）`);
+        }
+      }).catch(err => {
+        showToast(err && err.message ? err.message : '检查更新失败');
+      });
+    } else {
+      // 浏览器环境：直接查 API，有新版就跳浏览器下载
+      showToast('正在检查更新…');
+      fetch(API_LATEST).then(r => {
+        if (!r.ok) throw new Error('GitHub API 返回 ' + r.status);
+        return r.json();
+      }).then(rel => {
+        if (compareVersions(normalizeVersion(rel.tag_name), APP_VERSION) > 0) {
+          const asset = (rel.assets || []).find(a => a.name.toLowerCase().endsWith('.apk'));
+          if (!asset) throw new Error('最新 Release 里没有 APK 文件');
+          if (confirm(`发现新版本 v${normalizeVersion(rel.tag_name)}（当前 v${APP_VERSION}），是否前往下载？`)) {
+            window.open(asset.browser_download_url, '_blank');
+          }
+        } else {
+          showToast(`已是最新版本（v${APP_VERSION}）`);
+        }
+      }).catch(err => {
+        showToast('检查更新失败：' + err.message);
+      });
+    }
+  }
+
+  // ===== 传送门：在线题库广场 =====
+  // 题库 JSON 存放在 GitHub 仓库的 quizzes/ 目录；发布新题库 = 往该目录上传 JSON 文件。
+  // 这里通过 GitHub Contents API 匿名列出目录，点击即抓取 raw 内容走现有导入流程。
+
+  function getPortalMarkers() {
+    try { return JSON.parse(localStorage.getItem(PORTAL_LOADED_STORAGE)) || {}; } catch (e) { return {}; }
+  }
+
+  function setPortalMarker(fileName, sha) {
+    const markers = getPortalMarkers();
+    markers[fileName] = { sha: sha, loadedAt: Date.now() };
+    try { localStorage.setItem(PORTAL_LOADED_STORAGE, JSON.stringify(markers)); } catch (e) {}
+  }
+
+  function updatePortalBadge(count) {
+    const badge = $('portal-badge');
+    if (!badge) return;
+    if (count > 0) {
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function portalItemStatus(item, markers) {
+    const marker = markers[item.name];
+    if (marker && marker.sha === item.sha) return { cls: 'loaded', label: '已加载' };
+    if (marker) return { cls: 'update', label: '有更新' };
+    return { cls: 'new', label: '未加载' };
+  }
+
+  function renderPortalList(items) {
+    const list = $('portal-list');
+    const markers = getPortalMarkers();
+    if (!items.length) {
+      list.innerHTML = '<div class="portal-empty">仓库的 quizzes/ 目录还没有题库文件，快去发布第一个吧。</div>';
+      updatePortalBadge(0);
+      return;
+    }
+    let pending = 0;
+    list.innerHTML = items.map((item, idx) => {
+      const st = portalItemStatus(item, markers);
+      if (st.cls !== 'loaded') pending++;
+      const size = item.size ? formatSize(item.size) : '';
+      return `
+        <div class="portal-item" data-idx="${idx}" data-name="${escapeHtml(item.name)}">
+          <div class="portal-item-icon">📄</div>
+          <div class="portal-item-info">
+            <div class="portal-item-name">${escapeHtml(item.displayName)}</div>
+            <div class="portal-item-meta">${size || '&nbsp;'}</div>
+          </div>
+          <span class="portal-status ${st.cls}">${st.label}</span>
+        </div>`;
+    }).join('');
+    updatePortalBadge(pending);
+
+    list.querySelectorAll('.portal-item').forEach(el => {
+      el.addEventListener('click', () => {
+        const item = items[parseInt(el.dataset.idx, 10)];
+        if (item) loadPortalBank(item);
+      });
+    });
+  }
+
+  function loadPortalList(silent) {
+    const list = $('portal-list');
+    if (!silent) list.innerHTML = '<div class="portal-empty">🌀 正在从 GitHub 加载题库列表…</div>';
+    fetch(PORTAL_API + '?t=' + Date.now())
+      .then(r => {
+        if (!r.ok) {
+          if (r.status === 404) throw new Error('仓库里还没有 quizzes/ 目录');
+          if (r.status === 403) throw new Error('GitHub 请求太频繁，请稍后再试');
+          throw new Error('GitHub API 返回 ' + r.status);
+        }
+        return r.json();
+      })
+      .then(files => {
+        const items = (Array.isArray(files) ? files : [])
+          .filter(f => f.type === 'file' && f.name.toLowerCase().endsWith('.json'))
+          .map(f => {
+            const base = f.name.replace(/\.json$/i, '');
+            // 允许用「展示名~原文件名.json」的方式给题库起好看的展示名
+            const displayName = base.includes('~') ? base.split('~')[0] : base;
+            return { name: f.name, displayName, size: f.size, sha: f.sha, downloadUrl: f.download_url };
+          });
+        renderPortalList(items);
+      })
+      .catch(err => {
+        list.innerHTML = '<div class="portal-empty">加载失败：' + escapeHtml(err.message) + '<br>请检查网络后点「刷新列表」重试</div>';
+      });
+  }
+
+  function loadPortalBank(item) {
+    showToast('正在加载「' + item.displayName + '」…');
+    fetch(item.downloadUrl + (item.downloadUrl.includes('?') ? '&' : '?') + 't=' + Date.now())
+      .then(r => {
+        if (!r.ok) throw new Error('下载失败（HTTP ' + r.status + '）');
+        return r.text();
+      })
+      .then(text => {
+        const data = JSON.parse(text);
+        const validation = validateBankConfig(data);
+        if (!validation.valid) {
+          showResultModal(false, '配置文件校验失败：' + validation.error);
+          return;
+        }
+        // 记录已加载的文件版本（sha），用于显示「有更新」标记
+        setPortalMarker(item.name, item.sha);
+        processImport(data);
+        // 刷新列表状态
+        const list = $('portal-list');
+        if (list) loadPortalList(true);
+      })
+      .catch(err => {
+        showResultModal(false, '在线加载失败：' + (err instanceof SyntaxError ? '文件不是合法的 JSON' : err.message));
+      });
+  }
+
+  function openPortalModal() {
+    $('portal-modal').style.display = 'flex';
+    loadPortalList(false);
+  }
+
+  function closePortalModal() {
+    $('portal-modal').style.display = 'none';
+  }
+
+  function bindPortalAndUpdateEvents() {
+    $('portal-btn').addEventListener('click', openPortalModal);
+    $('portal-close-btn').addEventListener('click', closePortalModal);
+    $('portal-refresh-btn').addEventListener('click', () => loadPortalList(false));
+    $('portal-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'portal-modal') closePortalModal();
+    });
+    $('update-btn').addEventListener('click', checkForUpdate);
+    $('update-later-btn').addEventListener('click', () => {
+      $('update-modal').style.display = 'none';
+    });
+    $('update-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'update-modal' && !$('update-now-btn').disabled) {
+        $('update-modal').style.display = 'none';
+      }
+    });
+  }
+
   // ===== 初始化 =====
   function init() {
     loadTheme();
@@ -2082,6 +2384,7 @@
     bindImportEvents();
     bindUxEvents();
     bindGamificationEvents();
+    bindPortalAndUpdateEvents();
     updateStatsUI();
     updateRecycleBinBadge();
     updateWrongBookBadge();

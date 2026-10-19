@@ -1,0 +1,90 @@
+{
+  "version": "1.0",
+  "key": "english-vocab-basic",
+  "name": "英语基础词汇",
+  "icon": "🇬🇧",
+  "description": "英语常用词汇练习，含释义和例句解析",
+  "category": "language",
+  "questions": [
+    {
+      "id": 1,
+      "category": "词汇-动词",
+      "question": "选择单词 abandon 的正确中文释义：",
+      "options": ["放弃，抛弃", "接受，承认", "适应，调整", "钦佩，赞美"],
+      "answer": 0,
+      "explanation": "abandon /əˈbændən/ vt. 放弃，抛弃。例句：He abandoned his plan to study abroad. 他放弃了出国留学的计划。"
+    },
+    {
+      "id": 2,
+      "category": "词汇-动词",
+      "question": "选择单词 accomplish 的正确中文释义：",
+      "options": ["陪伴，伴随", "完成，实现", "积累，积聚", "调整，适应"],
+      "answer": 1,
+      "explanation": "accomplish /əˈkɑːmplɪʃ/ vt. 完成，实现（目标、任务）。例句：She accomplished her goal of running a marathon. 她完成了跑马拉松的目标。"
+    },
+    {
+      "id": 3,
+      "category": "词汇-形容词",
+      "question": "选择单词 abundant 的正确中文释义：",
+      "options": ["缺席的", "丰富的，充裕的", "抽象的", "荒谬的"],
+      "answer": 1,
+      "explanation": "abundant /əˈbʌndənt/ adj. 丰富的，充裕的。例句：The region has abundant natural resources. 该地区拥有丰富的自然资源。"
+    },
+    {
+      "id": 4,
+      "category": "词汇-名词",
+      "question": "选择单词 ambition 的正确中文释义：",
+      "options": ["救护车", "野心，抱负", "气氛，氛围", "救护车"],
+      "answer": 1,
+      "explanation": "ambition /æmˈbɪʃn/ n. 野心，抱负，雄心。例句：Her ambition is to become a doctor. 她的抱负是成为一名医生。"
+    },
+    {
+      "id": 5,
+      "category": "词汇-动词",
+      "question": "选择单词 analyze 的正确中文释义：",
+      "options": ["宣布，宣告", "分析，解析", "安排，布置", "申请，请求"],
+      "answer": 1,
+      "explanation": "analyze /ˈænəlaɪz/ vt. 分析，解析。例句：The scientist analyzed the data carefully. 科学家仔细分析了数据。"
+    },
+    {
+      "id": 6,
+      "category": "词汇-形容词",
+      "question": "选择单词 anxious 的正确中文释义：",
+      "options": ["生气的", "焦虑的，担忧的", "羞愧的", "惊讶的"],
+      "answer": 1,
+      "explanation": "anxious /ˈæŋkʃəs/ adj. 焦虑的，担忧的；渴望的。例句：She was anxious about the exam results. 她对考试结果感到焦虑。"
+    },
+    {
+      "id": 7,
+      "category": "词汇-动词",
+      "question": "选择单词 appreciate 的正确中文释义：",
+      "options": ["欣赏，感激", "接近，靠近", "安排，准备", "批准，同意"],
+      "answer": 0,
+      "explanation": "appreciate /əˈpriːʃieɪt/ vt. 欣赏，感激；理解。例句：I really appreciate your help. 我非常感激你的帮助。"
+    },
+    {
+      "id": 8,
+      "category": "词汇-名词",
+      "question": "选择单词 approach 的正确中文释义：",
+      "options": ["方法，途径；接近", "争论，辩论", "安排", "逮捕"],
+      "answer": 0,
+      "explanation": "approach /əˈproʊtʃ/ n. 方法，途径；v. 接近，靠近。例句：We need a new approach to this problem. 我们需要用新方法来解决这个问题。"
+    },
+    {
+      "id": 9,
+      "category": "词汇-形容词",
+      "question": "选择单词 appropriate 的正确中文释义：",
+      "options": ["明显的", "适当的，恰当的", "任意的", "人造的"],
+      "answer": 1,
+      "explanation": "appropriate /əˈproʊpriət/ adj. 适当的，恰当的。例句：Wear appropriate clothing for the interview. 面试时穿着要得体。"
+    },
+    {
+      "id": 10,
+      "category": "词汇-动词",
+      "question": "选择单词 argue 的正确中文释义：",
+      "options": ["安排，布置", "争论，辩论", "出现，产生", "逮捕，拘留"],
+      "answer": 1,
+      "explanation": "argue /ˈɑːrɡjuː/ v. 争论，辩论；主张。例句：They argued about politics for hours. 他们就政治问题争论了好几个小时。"
+    }
+  ]
+}
