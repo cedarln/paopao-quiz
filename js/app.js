@@ -273,7 +273,10 @@
     return a;
   }
 
+  let currentPage = 'home'; // 当前页面，供 Android 返回键判断返回层级
+
   function showPage(pageName) {
+    currentPage = pageName;
     Object.values(pages).forEach(p => p.classList.remove('active'));
     pages[pageName].classList.add('active');
     window.scrollTo(0, 0);
@@ -2125,7 +2128,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.8';
+  const APP_VERSION = '1.3.9';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2382,6 +2385,45 @@
     }).catch(() => {});
   }
 
+  // ===== Android 系统返回键 =====
+  // 界面切换是 class 切换（浏览器 history 无记录），默认按返回键会直接退出应用。
+  // 接管返回键：优先关闭最上层弹窗/面板 → 子页面回首页 → 首页才退出应用。
+  function closeTopOverlay() {
+    const modals = Array.from(document.querySelectorAll('.modal-overlay'))
+      .filter(m => m.style.display === 'flex');
+    if (modals.length) {
+      const top = modals[modals.length - 1];
+      top.style.display = 'none';
+      if (top.id === 'update-modal') setUpdateModalBusy(false);
+      return true;
+    }
+    const panels = Array.from(document.querySelectorAll('.theme-panel.show'));
+    if (panels.length) {
+      panels.forEach(p => p.classList.remove('show'));
+      return true;
+    }
+    return false;
+  }
+
+  function bindAndroidBackButton() {
+    const cap = window.Capacitor;
+    if (!isNativeApp() || !cap || typeof cap.nativeCallback !== 'function') return;
+    cap.nativeCallback('App', 'backButton', (data) => {
+      // 1. 有弹窗（含更新/清理/成就等）或主题背景面板打开 → 先关掉
+      if (closeTopOverlay()) return;
+      // 2. 答题页：确认后回首页，避免误触丢进度
+      if (currentPage === 'quiz') {
+        if (window.confirm('确定要退出本次刷题吗？')) showPage('home');
+        return;
+      }
+      // 3. 结果页 → 回首页
+      if (currentPage === 'result') { showPage('home'); return; }
+      // 4. 首页：history 有记录就后退，否则退出应用
+      if (data && data.canGoBack) { window.history.back(); return; }
+      cap.nativePromise('App', 'exitApp').catch(() => {});
+    });
+  }
+
   function checkForUpdate() {
     if (isNativeApp()) {
       showToast('正在检查更新…');
@@ -2598,6 +2640,7 @@
     bindPortalAndUpdateEvents();
     bindInstallResume();
     bindCleanupModal();
+    bindAndroidBackButton();
     checkLeftoverUpdates(); // 检查遗留更新包：已装完提示删除，没装完提示继续装
     updateStatsUI();
     updateRecycleBinBadge();
