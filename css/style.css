@@ -2322,3 +2322,76 @@ body.custom-bg::before {
   font-size: 12px;
   color: var(--text-secondary);
 }
+
+/* ===== 答题回顾（全部题目 + 详解） ===== */
+.review-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.review-header-row .review-title {
+  margin: 0;
+}
+
+.review-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.review-filter {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.review-filter.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.review-options {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review-option {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.review-option.correct {
+  color: #059669;
+  background: rgba(16, 185, 129, 0.12);
+  font-weight: 600;
+}
+
+.review-option.user-wrong {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.10);
+}
+
+.review-explanation {
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border-left: 3px solid var(--primary);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
