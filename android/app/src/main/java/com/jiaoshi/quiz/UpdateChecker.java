@@ -38,6 +38,25 @@ public final class UpdateChecker {
 
     private static final String UPDATE_DIR = "update";
 
+    /** 更新包所在目录（应用专属外部存储 update/） */
+    public static File updateDir(Context ctx) {
+        return new File(ctx.getExternalFilesDir(null), UPDATE_DIR);
+    }
+
+    /**
+     * 读取一个已下载 APK 的版本号（解析失败返回空串）。
+     * 用于判断「安装包是否已经装完」：包版本 <= 当前安装版本 = 已装完。
+     */
+    public static String archiveVersion(Context ctx, File apk) {
+        try {
+            android.content.pm.PackageInfo pi = ctx.getPackageManager()
+                    .getPackageArchiveInfo(apk.getAbsolutePath(), 0);
+            return pi == null ? "" : pi.versionName;
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     public static class ReleaseInfo {
         public final String tag;
         public final String apkUrl;

@@ -2063,7 +2063,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.2';
+  const APP_VERSION = '1.3.3';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2147,6 +2147,8 @@
   }
 
   let updateProgressBound = false;
+  // 等待安装的更新包文件名（权限授权后回到 App 自动继续安装）
+  const PENDING_INSTALL_STORAGE = 'quiz-pending-install';
 
   function bindUpdateProgressListeners() {
     const plugin = getUpdatePlugin();
@@ -2157,26 +2159,113 @@
       const fill = $('update-progress-fill');
       if (!fill) return;
       fill.style.width = data.percent + '%';
-      $('update-progress-text').textContent = data.percent + '%';
+      $('update-progress-text').textContent =
+        data.percent + '%' + (data.total > 0 ? ' · ' + formatSize(data.downloaded) + '/' + formatSize(data.total) : '');
     });
     plugin.addListener('finished', (data) => {
       setUpdateModalBusy(false);
       $('update-progress').style.display = 'none';
       showToast('下载完成，正在拉起安装…');
-      plugin.installApk({ fileName: data.fileName }).then(res => {
-        if (!res.started) {
-          showToast('请先允许「安装未知应用」，返回后再点一次更新');
-        }
-        $('update-modal').style.display = 'none';
-      }).catch(err => {
-        showToast('安装失败：' + (err && err.message ? err.message : '未知错误'));
-      });
+      tryInstall(data.fileName);
     });
     plugin.addListener('failed', () => {
       setUpdateModalBusy(false);
       $('update-progress').style.display = 'none';
       showToast('下载失败，请检查网络后重试');
     });
+  }
+
+  // 主动拉起安装器；需要「安装未知应用」权限时记录待安装文件，授权回来后自动继续
+  function tryInstall(fileName) {
+    const plugin = getUpdatePlugin();
+    if (!plugin || !fileName) return;
+    plugin.installApk({ fileName: fileName }).then(res => {
+      if (res.started) {
+        localStorage.removeItem(PENDING_INSTALL_STORAGE);
+        $('update-modal').style.display = 'none';
+        showToast('已打开安装器，安装完成后应用会自动重启');
+      } else {
+        // 跳去了「安装未知应用」授权页：记住待安装包，回到 App 自动续装
+        localStorage.setItem(PENDING_INSTALL_STORAGE, fileName);
+        $('update-modal-desc').textContent =
+          '需要「安装未知应用」权限：请在打开的设置页中允许，返回后将继续自动安装';
+        setUpdateModalBusy(false);
+        $('update-now-btn').disabled = true;
+        $('update-now-btn').textContent = '等待授权…';
+        showToast('请在设置中允许「安装未知应用」，返回后自动继续');
+      }
+    }).catch(err => {
+      setUpdateModalBusy(false);
+      showToast('安装失败：' + (err && err.message ? err.message : '未知错误'));
+    });
+  }
+
+  // 从授权页回到 App：自动继续安装待安装的更新包
+  function bindInstallResume() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      const pending = localStorage.getItem(PENDING_INSTALL_STORAGE);
+      if (!pending) return;
+      const plugin = getUpdatePlugin();
+      if (!plugin) return;
+      plugin.installApk({ fileName: pending }).then(res => {
+        if (res.started) {
+          localStorage.removeItem(PENDING_INSTALL_STORAGE);
+          $('update-modal').style.display = 'none';
+          showToast('已打开安装器，安装完成后应用会自动重启');
+        }
+        // 仍未授权则什么都不做，下次回到 App 再试
+      }).catch(() => {
+        localStorage.removeItem(PENDING_INSTALL_STORAGE); // 文件没了，清掉记录
+      });
+    });
+  }
+
+  // 启动时检查遗留更新包：已装完的提示删除释放空间；没装完的提示继续安装
+  let cleanupModalHandler = null;
+  function showCleanupModal(icon, title, desc, okLabel, onOk) {
+    $('cleanup-icon').textContent = icon;
+    $('cleanup-title').textContent = title;
+    $('cleanup-desc').textContent = desc;
+    $('cleanup-ok-btn').textContent = okLabel;
+    cleanupModalHandler = onOk;
+    $('cleanup-modal').style.display = 'flex';
+  }
+
+  function bindCleanupModal() {
+    $('cleanup-ok-btn').addEventListener('click', () => {
+      $('cleanup-modal').style.display = 'none';
+      if (cleanupModalHandler) cleanupModalHandler();
+      cleanupModalHandler = null;
+    });
+    $('cleanup-cancel-btn').addEventListener('click', () => {
+      $('cleanup-modal').style.display = 'none';
+      cleanupModalHandler = null;
+    });
+  }
+
+  function checkLeftoverUpdates() {
+    const plugin = getUpdatePlugin();
+    if (!plugin) return;
+    plugin.listDownloadedUpdates().then(res => {
+      const files = res.files || [];
+      if (!files.length) return;
+      const installed = files.find(f => f.installedOrOlder);
+      if (installed) {
+        showCleanupModal('🧹', '清理更新包',
+          `上次下载的更新包（v${installed.version || '?'}，${formatSize(installed.size)}）看起来已经安装完成，要删除它以释放空间吗？`,
+          '删除', () => {
+            plugin.deleteUpdateFile({ fileName: installed.fileName }).catch(() => {});
+          });
+      } else {
+        const pending = files[0];
+        showCleanupModal('📦', '发现未安装的更新',
+          `存在一个尚未安装的更新包（v${pending.version || '?'}，${formatSize(pending.size)}），要现在安装吗？`,
+          '立即安装', () => {
+            tryInstall(pending.fileName);
+          });
+      }
+    }).catch(() => {});
   }
 
   function checkForUpdate() {
@@ -2386,6 +2475,9 @@
     bindUxEvents();
     bindGamificationEvents();
     bindPortalAndUpdateEvents();
+    bindInstallResume();
+    bindCleanupModal();
+    checkLeftoverUpdates(); // 检查遗留更新包：已装完提示删除，没装完提示继续装
     updateStatsUI();
     updateRecycleBinBadge();
     updateWrongBookBadge();
