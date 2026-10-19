@@ -2128,7 +2128,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.10';
+  const APP_VERSION = '1.3.11';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2407,8 +2407,11 @@
 
   function bindAndroidBackButton() {
     const cap = window.Capacitor;
-    if (!isNativeApp() || !cap || typeof cap.nativeCallback !== 'function') return;
-    cap.nativeCallback('App', 'backButton', (data) => {
+    if (!isNativeApp() || !cap || typeof cap.addListener !== 'function') return;
+    // 关键：事件必须用 addListener 注册（走插件的 addListener 方法，原生端
+    // AppPlugin.hasListeners 才会返回 true）。直接 nativeCallback('App',
+    // 'backButton', ...) 调的是不存在的方法，会静默失败，返回键被原生层吞掉。
+    cap.addListener('App', 'backButton', (data) => {
       // 1. 有弹窗（含更新/清理/成就等）或主题背景面板打开 → 先关掉
       if (closeTopOverlay()) return;
       // 2. 答题页：确认后回首页，避免误触丢进度
