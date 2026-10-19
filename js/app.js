@@ -1697,8 +1697,9 @@
 
   // 事件绑定入口
   function bindUxEvents() {
-    // 主题
+    // 主题（🌙 和 🖼️ 都打开主题/背景面板；🖼️ 原先漏绑了点击事件，点了只有波纹动画）
     $('theme-toggle').addEventListener('click', toggleThemePanel);
+    $('bg-upload-btn').addEventListener('click', toggleThemePanel);
     document.querySelectorAll('.theme-option[data-theme]').forEach(opt => {
       opt.addEventListener('click', () => {
         applyTheme(opt.dataset.theme);
@@ -1714,7 +1715,7 @@
     });
     document.addEventListener('click', (e) => {
       const panel = $('theme-panel');
-      if (!panel.contains(e.target) && e.target.id !== 'theme-toggle') {
+      if (!panel.contains(e.target) && e.target.id !== 'theme-toggle' && e.target.id !== 'bg-upload-btn') {
         panel.classList.remove('show');
       }
     });
@@ -2062,7 +2063,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.0';
+  const APP_VERSION = '1.3.1';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
