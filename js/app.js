@@ -2125,7 +2125,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.7';
+  const APP_VERSION = '1.3.8';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2533,9 +2533,8 @@
         // 记录已加载的文件版本（sha），用于显示「有更新」标记
         setPortalMarker(item.name, item.sha);
         processImport(data);
-        // 刷新列表状态
-        const list = $('portal-list');
-        if (list) loadPortalList(true);
+        // 导入成功：自动关闭在线题库弹窗（导入结果由独立的提示弹窗展示）
+        closePortalModal();
       })
       .catch(err => {
         showResultModal(false, '在线加载失败：' + (err instanceof SyntaxError ? '文件不是合法的 JSON' : err.message));
