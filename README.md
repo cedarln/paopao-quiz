@@ -10,6 +10,10 @@
 
 ## 📦 Releases
 
+### v1.3.1（2026-10-19）
+
+- 🐛 修复：首页右上角 🖼️「自定义背景」按钮没有绑定点击事件、点了只有波纹动画的问题 —— 现在与 🌙 一样打开主题/背景面板
+
 ### v1.3.0（2026-10-19）
 
 > 📥 **下载 APK**：[paopao-quiz-v1.3.0.apk](https://github.com/cedarln/paopao-quiz/releases/download/v1.3.0/paopao-quiz-v1.3.0.apk)
