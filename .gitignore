@@ -32,3 +32,7 @@ Thumbs.db
 download.html
 tmp/
 *.tmp
+
+# 签名密钥（绝不入库，见 app/build.gradle「签名配置」）
+keystore/
+keystore.properties

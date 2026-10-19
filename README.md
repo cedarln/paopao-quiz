@@ -10,6 +10,17 @@
 
 ## 📦 Releases
 
+### v1.3.0（2026-10-19）
+
+> 📥 **下载 APK**：[paopao-quiz-v1.3.0.apk](https://github.com/cedarln/paopao-quiz/releases/download/v1.3.0/paopao-quiz-v1.3.0.apk)
+
+- 文件大小：3.2 MB
+- MD5：`726fbd539cad1351faa021ea2815bee8`
+
+- ✅ 新增 **传送门 · 在线题库广场**：首页新入口，列出 GitHub `quizzes/` 目录下的题库 JSON，点击即可在线加载 / 更新，带「未加载 / 有更新 / 已加载」状态标记 —— 发布新题库后用户无需再手动下载导入
+- ✅ 新增 **检查更新**：首页 🔄 按钮，查询 GitHub Release 比较版本；App 内通过系统 DownloadManager 下载（通知栏进度）并自动拉起安装器，与泡泡课表同一套方案
+- ✅ 从本版本起 APK 采用专用 release 签名（`keystore/paopao-quiz.jks`，密钥不入库）
+
 ### v1.2.0（2026-10-13）
 
 > 📥 **下载 APK**：[paopao-quiz-v1.2.0.apk](https://github.com/cedarln/paopao-quiz/releases/download/v1.2.0/paopao-quiz-v1.2.0.apk)
@@ -47,6 +58,19 @@
 - 支持导入 **JSON 格式** 自定义题库（英语、日语、公考等任意科目）
 - 同主题题库导入冲突时可选 **覆盖** 或 **追加**
 - 导入的题库持久化存储，可单独删除
+
+### 🌀 传送门（在线题库广场）
+- 题库 JSON 统一放在本仓库的 **`quizzes/` 目录**，App 内通过 GitHub Contents API 在线列出
+- 点击即可在线加载 / 更新题库（走同一套校验与冲突处理），无需手动下载导入
+- 每个文件显示「未加载 / 有更新 / 已加载」状态（按文件内容 sha 判断，发布即更新）
+- **发布新题库**：把符合 [配置格式](#-题库配置文件格式) 的 JSON 上传到 `quizzes/` 目录即可（GitHub 网页端 Add file → Upload files 就行）。文件名可用 `展示名~文件名.json` 让 App 里显示更友好的名字，例如 `英语高频词~english-500.json`
+- 用户在 App 传送门里点「刷新列表」即可拿到最新题库
+
+### 🔄 检查更新
+- 首页右上角 🔄 按钮，查询本仓库 GitHub Releases 的最新版本
+- App 内：发现新版本弹窗展示更新说明，确认后系统 DownloadManager 下载（通知栏进度），完成后自动拉起安装器（Android 8+ 需允许「安装未知应用」）
+- 浏览器访问时退化为跳转下载链接
+- **发版流程**：改 `android/app/build.gradle` 的 `versionCode/versionName` 与 `js/app.js` 里的 `APP_VERSION` → 构建**签名** release APK → 创建 tag `vX.Y.Z` 的 Release 并上传 APK
 
 ### 🗑️ 回收站
 - 删除的课程卡片进入回收站，可恢复或彻底删除
