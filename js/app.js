@@ -536,6 +536,7 @@
     $('result-title').textContent = '考试结束';
     $('result-message').textContent = message;
 
+    reviewFilter = 'all';
     renderReview();
     showPage('result');
   }
@@ -798,7 +799,8 @@
     $('result-title').textContent = rate >= 60 ? '刷题完成！' : '继续努力！';
     $('result-message').textContent = message;
 
-    // 答题回顾
+    // 答题回顾（展示全部题目与详解，可筛选只看错题）
+    reviewFilter = 'all';
     renderReview();
 
     // 收集错题到错题本（错题再练模式下不重复收集）
@@ -809,33 +811,72 @@
     showPage('result');
   }
 
+  // 答题回顾筛选：'all' = 全部题目，'wrong' = 只看错题
+  let reviewFilter = 'all';
+
   function renderReview() {
     const reviewSection = $('review-section');
     const reviewList = $('review-list');
 
-    if (state.answers.some(a => a && !a.isRight)) {
-      reviewSection.style.display = 'block';
-      reviewList.innerHTML = '';
-
-      state.questions.forEach((q, i) => {
-        const ans = state.answers[i];
-        if (!ans || ans.isRight) return;
-
-        const item = document.createElement('div');
-        item.className = 'review-item wrong';
-        const userAnswer = ans.selected >= 0 ? OPTION_LABELS[ans.selected] : '未作答';
-        item.innerHTML = `
-          <div class="review-question">${i + 1}. ${q.question}</div>
-          <div class="review-answer">
-            你的答案：<span class="wrong-answer">${userAnswer}</span> ｜
-            正确答案：<span class="correct-answer">${OPTION_LABELS[ans.correct]}</span>
-          </div>
-        `;
-        reviewList.appendChild(item);
-      });
-    } else {
+    // 没有任何答题记录就不显示
+    if (!state.answers.some(a => a)) {
       reviewSection.style.display = 'none';
+      return;
     }
+    reviewSection.style.display = 'block';
+
+    const wrongCount = state.questions.filter((q, i) => state.answers[i] && !state.answers[i].isRight).length;
+    const totalCount = state.questions.length;
+
+    reviewList.innerHTML = state.questions
+      .map((q, i) => ({ q, i, ans: state.answers[i] }))
+      .filter(({ ans }) => reviewFilter === 'all' || (ans && !ans.isRight))
+      .map(({ q, i, ans }) => {
+        const correctIdx = ans ? ans.correct : q.answer;
+        const isRight = !!(ans && ans.isRight);
+        const unanswered = !ans || ans.selected < 0;
+        const statusCls = isRight ? 'correct' : 'wrong';
+        const statusText = isRight ? '✓ 回答正确' : (unanswered ? '✗ 未作答' : '✗ 回答错误');
+        const userLabel = (!ans || ans.selected < 0) ? '' : ans.selected;
+
+        const optionsHtml = (q.options || []).map((opt, oi) => {
+          const escOpt = escapeHtml(String(opt));
+          if (oi === correctIdx) {
+            return `<div class="review-option correct">${OPTION_LABELS[oi]}. ${escOpt} ✓正确答案</div>`;
+          }
+          if (!unanswered && oi === userLabel && !isRight) {
+            return `<div class="review-option user-wrong">${OPTION_LABELS[oi]}. ${escOpt} ✗你的选择</div>`;
+          }
+          return `<div class="review-option">${OPTION_LABELS[oi]}. ${escOpt}</div>`;
+        }).join('');
+
+        const expHtml = q.explanation
+          ? `<div class="review-explanation">💡 ${escapeHtml(String(q.explanation))}</div>`
+          : '';
+
+        return `
+          <div class="review-item ${statusCls}">
+            <div class="review-question">${i + 1}. ${escapeHtml(String(q.question))}</div>
+            <div class="review-answer">
+              ${isRight
+                ? `<span class="correct-answer">${statusText}</span>`
+                : `<span class="wrong-answer">${statusText}</span>${!unanswered ? ` ｜ 你的选择：${OPTION_LABELS[userLabel]}` : ''} ｜ 正确答案：${OPTION_LABELS[correctIdx]}`}
+            </div>
+            <div class="review-options">${optionsHtml}</div>
+            ${expHtml}
+          </div>`;
+      }).join('');
+
+    // 更新筛选条状态
+    const chips = reviewSection.querySelectorAll('.review-filter');
+    chips.forEach(c => {
+      c.classList.toggle('active', c.dataset.filter === reviewFilter);
+      if (c.dataset.filter === 'wrong') {
+        c.textContent = `只看错题（${wrongCount}）`;
+      } else {
+        c.textContent = `全部（${totalCount}）`;
+      }
+    });
   }
 
   // ===== 事件绑定 =====
@@ -883,6 +924,14 @@
       cleanupQuizSession();
       showPage('home');
       updateStatsUI();
+    });
+
+    // 答题回顾筛选：全部 / 只看错题
+    document.querySelectorAll('#review-section .review-filter').forEach(btn => {
+      btn.addEventListener('click', () => {
+        reviewFilter = btn.dataset.filter;
+        renderReview();
+      });
     });
   }
 
@@ -2076,7 +2125,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.4';
+  const APP_VERSION = '1.3.5';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';

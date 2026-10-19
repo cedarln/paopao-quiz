@@ -257,7 +257,13 @@
           <button class="result-btn home-btn" id="home-btn">返回首页</button>
         </div>
         <div class="review-section" id="review-section" style="display:none;">
-          <h3 class="review-title">答题回顾</h3>
+          <div class="review-header-row">
+            <h3 class="review-title">答题回顾</h3>
+            <div class="review-filters">
+              <button class="review-filter active" data-filter="all">全部</button>
+              <button class="review-filter" data-filter="wrong">只看错题</button>
+            </div>
+          </div>
           <div class="review-list" id="review-list"></div>
         </div>
       </div>
