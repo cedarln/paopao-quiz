@@ -2125,7 +2125,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.5';
+  const APP_VERSION = '1.3.6';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2134,15 +2134,36 @@
   const PORTAL_API = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/contents/quizzes';
   const PORTAL_LOADED_STORAGE = 'quiz-portal-loaded';
 
-  const isNativeApp = () =>
-    !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+  const isNativeApp = () => {
+    try {
+      return !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    } catch (e) { return false; }
+  };
 
   const getUpdatePlugin = () => {
-    if (isNativeApp() && window.Capacitor.Plugins && window.Capacitor.Plugins.UpdateChecker) {
-      return window.Capacitor.Plugins.UpdateChecker;
-    }
+    try {
+      if (isNativeApp() && window.Capacitor) {
+        let p = window.Capacitor.Plugins && window.Capacitor.Plugins.UpdateChecker;
+        // 某些设备/版本上 Plugins 代理可能缺失：用注入的 registerPlugin 现场补一个
+        if (!p && typeof window.Capacitor.registerPlugin === 'function') {
+          try { p = window.Capacitor.registerPlugin('UpdateChecker'); } catch (e) { p = null; }
+        }
+        if (p) return p;
+      }
+    } catch (e) {}
     return null;
   };
+
+  // 用系统浏览器下载 APK：绝不在应用内 WebView 里打开 GitHub 页面
+  // （Capacitor 会把外部 URL 转交给系统浏览器；纯浏览器环境用新标签页）
+  function browserDownloadUpdate(url) {
+    if (isNativeApp()) {
+      showToast('正在打开系统浏览器下载…');
+      window.location.href = url;
+    } else {
+      window.open(url, '_blank');
+    }
+  }
 
   // "v1.2.3" -> "1.2.3"
   function normalizeVersion(tag) {
@@ -2173,7 +2194,10 @@
     $('update-now-btn').textContent = busy ? '下载中…' : '立即更新';
   }
 
+  let lastApkUrl = '';
+
   function openUpdateModal(latest, current, apkUrl) {
+    lastApkUrl = apkUrl;
     $('update-modal-icon').textContent = '🎉';
     $('update-modal-title').textContent = '发现新版本 v' + normalizeVersion(latest.tag);
     $('update-modal-desc').textContent =
@@ -2190,21 +2214,38 @@
     $('update-progress').style.display = 'none';
     $('update-progress-fill').style.width = '0%';
     $('update-progress-text').textContent = '0%';
+    const fb = $('update-browser-btn');
+    if (fb) { fb.style.display = 'block'; fb.textContent = '⬇️ 应用内下载有问题？用系统浏览器下载'; }
     setUpdateModalBusy(false);
     $('update-now-btn').onclick = () => startNativeDownload(latest, apkUrl);
     $('update-modal').style.display = 'flex';
   }
 
+  // 下载失败 / 应用内更新组件不可用时的后路：改用系统浏览器下载
+  function showBrowserFallback() {
+    const btn = $('update-browser-btn');
+    if (btn && lastApkUrl) {
+      btn.style.display = 'block';
+      btn.textContent = '⚠️ 应用内下载失败？点此用系统浏览器下载';
+    }
+  }
+
   // App 内下载 + 自动拉起安装
   function startNativeDownload(latest, apkUrl) {
     const plugin = getUpdatePlugin();
-    if (!plugin) return;
+    if (!plugin) {
+      // 原生环境但拿不到更新插件：直接交给系统浏览器，不在应用内打开 GitHub
+      browserDownloadUpdate(apkUrl);
+      return;
+    }
     setUpdateModalBusy(true);
     $('update-progress').style.display = 'block';
 
     plugin.startDownload({ url: apkUrl }).catch(err => {
       setUpdateModalBusy(false);
+      $('update-progress').style.display = 'none';
       showToast('下载失败：' + (err && err.message ? err.message : '未知错误'));
+      showBrowserFallback();
     });
   }
 
@@ -2234,6 +2275,7 @@
       setUpdateModalBusy(false);
       $('update-progress').style.display = 'none';
       showToast('下载失败，请检查网络后重试');
+      showBrowserFallback();
     });
   }
 
@@ -2345,8 +2387,12 @@
         showToast(err && err.message ? err.message : '检查更新失败');
       });
     } else {
-      // 浏览器环境：直接查 API，有新版就跳浏览器下载
+      // 兜底：查 GitHub API，有新版就交给系统浏览器下载（绝不在应用内打开 GitHub）
       showToast('正在检查更新…');
+      if (window.Capacitor && !plugin) {
+        // 原生环境但应用内更新组件不可用：提示并降级到系统浏览器
+        showToast('应用内更新组件不可用，将改用系统浏览器下载');
+      }
       fetch(API_LATEST).then(r => {
         if (!r.ok) throw new Error('GitHub API 返回 ' + r.status);
         return r.json();
@@ -2355,7 +2401,7 @@
           const asset = (rel.assets || []).find(a => a.name.toLowerCase().endsWith('.apk'));
           if (!asset) throw new Error('最新 Release 里没有 APK 文件');
           if (confirm(`发现新版本 v${normalizeVersion(rel.tag_name)}（当前 v${APP_VERSION}），是否前往下载？`)) {
-            window.open(asset.browser_download_url, '_blank');
+            browserDownloadUpdate(asset.browser_download_url);
           }
         } else {
           showToast(`已是最新版本（v${APP_VERSION}）`);
@@ -2502,6 +2548,9 @@
       if (e.target.id === 'portal-modal') closePortalModal();
     });
     $('update-btn').addEventListener('click', checkForUpdate);
+    $('update-browser-btn').addEventListener('click', () => {
+      if (lastApkUrl) browserDownloadUpdate(lastApkUrl);
+    });
     $('update-later-btn').addEventListener('click', () => {
       $('update-modal').style.display = 'none';
     });
