@@ -51,6 +51,44 @@
   const FAVORITES_STORAGE = 'quiz-favorites';
   const STUDY_LOG_STORAGE = 'quiz-study-log';
 
+  // ===== IndexedDB 题库存储 =====
+  // 导入的题库（尤其是几千题的英语词库）体积可达数 MB，localStorage 配额只有约 5MB，
+  // 改用 IndexedDB 存储后基本不受限。旧版本存在 localStorage 里的数据会在启动时自动迁移。
+  const IDB_NAME = 'quiz-storage';
+  const IDB_STORE = 'kv';
+  const IDB_IMPORTED_KEY = 'imported-banks';
+
+  function openIdb() {
+    return new Promise((resolve, reject) => {
+      if (!('indexedDB' in window)) { reject(new Error('IndexedDB 不可用')); return; }
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        if (!req.result.objectStoreNames.contains(IDB_STORE)) {
+          req.result.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function idbGet(key) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const rq = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+      rq.onsuccess = () => resolve(rq.result);
+      rq.onerror = () => reject(rq.error);
+    }));
+  }
+
+  function idbSet(key, val) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(val, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
   // ===== 成就系统 =====
   // type: 答题/连击/等级/打卡/综合  | progress: { current, target } 或 null（无进度条）
   const ACHIEVEMENTS = [
@@ -1178,12 +1216,27 @@
 
   // ===== 导入题库功能 =====
 
-  // 从 localStorage 加载已导入的题库
-  function loadImportedBanks() {
+  // 加载已导入的题库：优先 IndexedDB；旧版本数据在 localStorage 里的会自动迁移过去
+  async function loadImportedBanks() {
     try {
-      const saved = localStorage.getItem(IMPORTED_STORAGE_KEY);
-      if (saved) {
-        const banks = JSON.parse(saved);
+      let banks = null;
+      try {
+        banks = await idbGet(IDB_IMPORTED_KEY);
+      } catch (e) {
+        console.warn('IndexedDB 读取失败，退回 localStorage', e);
+      }
+      if (!banks) {
+        const saved = localStorage.getItem(IMPORTED_STORAGE_KEY);
+        if (saved) {
+          banks = JSON.parse(saved);
+          // 迁移到 IndexedDB，成功后清掉 localStorage 里的旧数据腾出配额
+          idbSet(IDB_IMPORTED_KEY, banks).then(() => {
+            try { localStorage.removeItem(IMPORTED_STORAGE_KEY); } catch (e) {}
+            console.info('已导入题库迁移至 IndexedDB 完成');
+          }).catch(e => console.warn('迁移导入题库失败', e));
+        }
+      }
+      if (banks && typeof banks === 'object') {
         Object.entries(banks).forEach(([key, bank]) => {
           if (bank && Array.isArray(bank.questions)) {
             window.QUIZ_DATA = window.QUIZ_DATA || {};
@@ -1197,20 +1250,18 @@
     }
   }
 
-  // 保存已导入的题库到 localStorage
+  // 保存已导入的题库到 IndexedDB（异步，不阻塞导入流程）
   function saveImportedBanks() {
-    try {
-      const banks = {};
-      Object.keys(state.importedKeys).forEach(key => {
-        if (window.QUIZ_DATA[key]) {
-          banks[key] = window.QUIZ_DATA[key];
-        }
-      });
-      localStorage.setItem(IMPORTED_STORAGE_KEY, JSON.stringify(banks));
-    } catch (e) {
+    const banks = {};
+    Object.keys(state.importedKeys).forEach(key => {
+      if (window.QUIZ_DATA[key]) {
+        banks[key] = window.QUIZ_DATA[key];
+      }
+    });
+    idbSet(IDB_IMPORTED_KEY, banks).catch(e => {
       console.warn('保存导入题库失败', e);
       showToast('保存失败，存储空间可能不足');
-    }
+    });
   }
 
   // 校验配置文件格式
@@ -2382,7 +2433,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.4.1';
+  const APP_VERSION = '1.5.0';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2782,13 +2833,27 @@
         <div class="portal-item" data-idx="${idx}" data-name="${escapeHtml(item.name)}">
           <div class="portal-item-icon">📄</div>
           <div class="portal-item-info">
-            <div class="portal-item-name">${escapeHtml(item.displayName)}</div>
+            <div class="portal-item-name"><span class="name-text">${escapeHtml(item.displayName)}</span></div>
             <div class="portal-item-meta">${size || '&nbsp;'}</div>
           </div>
           <span class="portal-status ${st.cls}">${st.label}</span>
         </div>`;
     }).join('');
     updatePortalBadge(pending);
+
+    // 题库名超宽时启用跑马灯滚动（速度约 22px/s，两端停留）
+    requestAnimationFrame(() => {
+      list.querySelectorAll('.portal-item-name').forEach(el => {
+        const text = el.querySelector('.name-text');
+        if (!text) return;
+        const overflow = text.scrollWidth - el.clientWidth;
+        if (overflow > 2) {
+          el.classList.add('scrolling');
+          el.style.setProperty('--marquee-shift', (overflow + 8) + 'px');
+          el.style.setProperty('--marquee-dur', Math.max(4, Math.round((overflow + 8) / 22 * 2)) + 's');
+        }
+      });
+    });
 
     list.querySelectorAll('.portal-item').forEach(el => {
       el.addEventListener('click', () => {
@@ -2882,7 +2947,7 @@
   }
 
   // ===== 初始化 =====
-  function init() {
+  async function init() {
     loadTheme();
     loadCustomBackground();
     loadStats();
@@ -2890,7 +2955,7 @@
     loadAchievements();
     loadFavorites();
     loadStudyLog();
-    loadImportedBanks();
+    await loadImportedBanks(); // 需在渲染题库列表前完成（含旧数据迁移）
     loadRecycleBin();
     loadWrongBook();
     updateStreak();
