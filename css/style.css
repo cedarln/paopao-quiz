@@ -2254,8 +2254,26 @@ body.custom-bg::before {
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* 题库名超出宽度时滚动显示（跑马灯），由 JS 检测溢出后添加 .scrolling */
+.portal-item-name .name-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+.portal-item-name.scrolling .name-text {
+  max-width: none;
+  animation: portal-marquee var(--marquee-dur, 8s) linear infinite alternate;
+}
+
+@keyframes portal-marquee {
+  0%, 12% { transform: translateX(0); }
+  88%, 100% { transform: translateX(calc(-1 * var(--marquee-shift, 40px))); }
 }
 
 .portal-item-meta {
