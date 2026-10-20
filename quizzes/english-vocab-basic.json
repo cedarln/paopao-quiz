@@ -3,14 +3,19 @@
   "key": "english-vocab-basic",
   "name": "英语基础词汇",
   "icon": "🇬🇧",
-  "description": "英语常用词汇练习，含释义和例句解析",
+  "description": "英语常用词汇练习，含释义和例句解析（100+ 题）",
   "category": "language",
   "questions": [
     {
       "id": 1,
       "category": "词汇-动词",
       "question": "选择单词 abandon 的正确中文释义：",
-      "options": ["放弃，抛弃", "接受，承认", "适应，调整", "钦佩，赞美"],
+      "options": [
+        "放弃，抛弃",
+        "接受，承认",
+        "适应，调整",
+        "钦佩，赞美"
+      ],
       "answer": 0,
       "explanation": "abandon /əˈbændən/ vt. 放弃，抛弃。例句：He abandoned his plan to study abroad. 他放弃了出国留学的计划。"
     },
@@ -18,7 +23,12 @@
       "id": 2,
       "category": "词汇-动词",
       "question": "选择单词 accomplish 的正确中文释义：",
-      "options": ["陪伴，伴随", "完成，实现", "积累，积聚", "调整，适应"],
+      "options": [
+        "陪伴，伴随",
+        "完成，实现",
+        "积累，积聚",
+        "调整，适应"
+      ],
       "answer": 1,
       "explanation": "accomplish /əˈkɑːmplɪʃ/ vt. 完成，实现（目标、任务）。例句：She accomplished her goal of running a marathon. 她完成了跑马拉松的目标。"
     },
@@ -26,7 +36,12 @@
       "id": 3,
       "category": "词汇-形容词",
       "question": "选择单词 abundant 的正确中文释义：",
-      "options": ["缺席的", "丰富的，充裕的", "抽象的", "荒谬的"],
+      "options": [
+        "缺席的",
+        "丰富的，充裕的",
+        "抽象的",
+        "荒谬的"
+      ],
       "answer": 1,
       "explanation": "abundant /əˈbʌndənt/ adj. 丰富的，充裕的。例句：The region has abundant natural resources. 该地区拥有丰富的自然资源。"
     },
@@ -34,7 +49,12 @@
       "id": 4,
       "category": "词汇-名词",
       "question": "选择单词 ambition 的正确中文释义：",
-      "options": ["救护车", "野心，抱负", "气氛，氛围", "救护车"],
+      "options": [
+        "救护车",
+        "野心，抱负",
+        "气氛，氛围",
+        "能力，才能"
+      ],
       "answer": 1,
       "explanation": "ambition /æmˈbɪʃn/ n. 野心，抱负，雄心。例句：Her ambition is to become a doctor. 她的抱负是成为一名医生。"
     },
@@ -42,7 +62,12 @@
       "id": 5,
       "category": "词汇-动词",
       "question": "选择单词 analyze 的正确中文释义：",
-      "options": ["宣布，宣告", "分析，解析", "安排，布置", "申请，请求"],
+      "options": [
+        "宣布，宣告",
+        "分析，解析",
+        "安排，布置",
+        "申请，请求"
+      ],
       "answer": 1,
       "explanation": "analyze /ˈænəlaɪz/ vt. 分析，解析。例句：The scientist analyzed the data carefully. 科学家仔细分析了数据。"
     },
@@ -50,7 +75,12 @@
       "id": 6,
       "category": "词汇-形容词",
       "question": "选择单词 anxious 的正确中文释义：",
-      "options": ["生气的", "焦虑的，担忧的", "羞愧的", "惊讶的"],
+      "options": [
+        "生气的",
+        "焦虑的，担忧的",
+        "羞愧的",
+        "惊讶的"
+      ],
       "answer": 1,
       "explanation": "anxious /ˈæŋkʃəs/ adj. 焦虑的，担忧的；渴望的。例句：She was anxious about the exam results. 她对考试结果感到焦虑。"
     },
@@ -58,7 +88,12 @@
       "id": 7,
       "category": "词汇-动词",
       "question": "选择单词 appreciate 的正确中文释义：",
-      "options": ["欣赏，感激", "接近，靠近", "安排，准备", "批准，同意"],
+      "options": [
+        "欣赏，感激",
+        "接近，靠近",
+        "安排，准备",
+        "批准，同意"
+      ],
       "answer": 0,
       "explanation": "appreciate /əˈpriːʃieɪt/ vt. 欣赏，感激；理解。例句：I really appreciate your help. 我非常感激你的帮助。"
     },
@@ -66,7 +101,12 @@
       "id": 8,
       "category": "词汇-名词",
       "question": "选择单词 approach 的正确中文释义：",
-      "options": ["方法，途径；接近", "争论，辩论", "安排", "逮捕"],
+      "options": [
+        "方法，途径；接近",
+        "争论，辩论",
+        "安排",
+        "逮捕"
+      ],
       "answer": 0,
       "explanation": "approach /əˈproʊtʃ/ n. 方法，途径；v. 接近，靠近。例句：We need a new approach to this problem. 我们需要用新方法来解决这个问题。"
     },
@@ -74,7 +114,12 @@
       "id": 9,
       "category": "词汇-形容词",
       "question": "选择单词 appropriate 的正确中文释义：",
-      "options": ["明显的", "适当的，恰当的", "任意的", "人造的"],
+      "options": [
+        "明显的",
+        "适当的，恰当的",
+        "任意的",
+        "人造的"
+      ],
       "answer": 1,
       "explanation": "appropriate /əˈproʊpriət/ adj. 适当的，恰当的。例句：Wear appropriate clothing for the interview. 面试时穿着要得体。"
     },
@@ -82,9 +127,1249 @@
       "id": 10,
       "category": "词汇-动词",
       "question": "选择单词 argue 的正确中文释义：",
-      "options": ["安排，布置", "争论，辩论", "出现，产生", "逮捕，拘留"],
+      "options": [
+        "安排，布置",
+        "争论，辩论",
+        "出现，产生",
+        "逮捕，拘留"
+      ],
       "answer": 1,
       "explanation": "argue /ˈɑːrɡjuː/ v. 争论，辩论；主张。例句：They argued about politics for hours. 他们就政治问题争论了好几个小时。"
+    },
+    {
+      "id": 11,
+      "category": "基础词汇",
+      "question": "选择单词 week 的正确中文释义：",
+      "options": [
+        "n. 父亲, 祖先, 长辈, 神父, 创始者",
+        "n. 星期, 周",
+        "vt. 有, 怀有, 拿, 进行",
+        "n. 历史, 过去, 经历, 发展过程…"
+      ],
+      "answer": 1,
+      "explanation": "week /wi:k/ n. 星期, 周"
+    },
+    {
+      "id": 12,
+      "category": "基础词汇",
+      "question": "选择与释义「vt. 表现, 表示, 描绘, 讲述…」对应的单词：",
+      "options": [
+        "represent",
+        "public",
+        "can",
+        "material"
+      ],
+      "answer": 0,
+      "explanation": "represent /.repri'zent/ vt. 表现, 表示, 描绘, 讲述, 代表, 象征, 回忆, 再赠送, 再上演；vi. 提出异议"
+    },
+    {
+      "id": 13,
+      "category": "基础词汇",
+      "question": "选择单词 appear 的正确中文释义：",
+      "options": [
+        "n. 星期, 周",
+        "vi. 出现, 显得, 来到",
+        "n. 位置, 地位, 身分, 形势, 姿势…",
+        "n. 学校, 鱼群, 门派, 学派"
+      ],
+      "answer": 1,
+      "explanation": "appear /ә'piә/ vi. 出现, 显得, 来到； 出庭, 到案, 出现"
+    },
+    {
+      "id": 14,
+      "category": "基础词汇",
+      "question": "选择与释义「pron. 他的」对应的单词：",
+      "options": [
+        "without",
+        "light",
+        "wall",
+        "his"
+      ],
+      "answer": 3,
+      "explanation": "his /hiz/ pron. 他的； 组氨酸"
+    },
+    {
+      "id": 15,
+      "category": "基础词汇",
+      "question": "选择单词 not 的正确中文释义：",
+      "options": [
+        "n. 底部, 垒, 基础, 基地",
+        "vi. 问, 要求",
+        "pron. 这些",
+        "adv. 不, 非, 未"
+      ],
+      "answer": 3,
+      "explanation": "not /nɒt/ adv. 不, 非, 未； 非"
+    },
+    {
+      "id": 16,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 光, 光亮, 灯, 日光, 发光体…」对应的单词：",
+      "options": [
+        "represent",
+        "light",
+        "fight",
+        "himself"
+      ],
+      "answer": 1,
+      "explanation": "light /lait/ n. 光, 光亮, 灯, 日光, 发光体, 光源, 杰出人物, 火花, 眼光…"
+    },
+    {
+      "id": 17,
+      "category": "基础词汇",
+      "question": "选择单词 last 的正确中文释义：",
+      "options": [
+        "a. 最后的, 末尾的, 最近的",
+        "n. 墙, 墙壁, 垣, 内壁, 分界物…",
+        "n. 冒险, 危险, 保险额",
+        "pron. 她"
+      ],
+      "answer": 0,
+      "explanation": "last /lɑ:st/ a. 最后的, 末尾的, 最近的；vi. 持续, 支持, 维持；vt. 使维持, 够...用…"
+    },
+    {
+      "id": 18,
+      "category": "基础词汇",
+      "question": "选择与释义「a. 迟的, 晚的, 已故的」对应的单词：",
+      "options": [
+        "carry",
+        "material",
+        "late",
+        "wait"
+      ],
+      "answer": 2,
+      "explanation": "late /leit/ a. 迟的, 晚的, 已故的；adv. 很晚, 很迟, 晚"
+    },
+    {
+      "id": 19,
+      "category": "基础词汇",
+      "question": "选择单词 will 的正确中文释义：",
+      "options": [
+        "vt. 表现, 表示, 描绘, 讲述…",
+        "n. 电脑, 电子计算机",
+        "n. 意志, 决心, 意愿, 意向, 干劲…",
+        "prep. 每一, 通过, 经, 按照"
+      ],
+      "answer": 2,
+      "explanation": "will /wil/ n. 意志, 决心, 意愿, 意向, 干劲, 遗嘱；vt. 用意志的力量驱使, 决意, 愿意, 立遗嘱…"
+    },
+    {
+      "id": 20,
+      "category": "基础词汇",
+      "question": "选择与释义「a. 大的, 大量的, 宽大的, 广博的」对应的单词：",
+      "options": [
+        "without",
+        "large",
+        "she",
+        "single"
+      ],
+      "answer": 1,
+      "explanation": "large /lɑ:dʒ/ a. 大的, 大量的, 宽大的, 广博的；adv. 大大地, 夸大地"
+    },
+    {
+      "id": 21,
+      "category": "基础词汇",
+      "question": "选择单词 base 的正确中文释义：",
+      "options": [
+        "n. 比率, 率, 速度, 价格, 费用…",
+        "pron. 什么",
+        "n. 底部, 垒, 基础, 基地",
+        "vt. 卖, 背叛, 销售, 出卖"
+      ],
+      "answer": 2,
+      "explanation": "base /beis/ n. 底部, 垒, 基础, 基地；vt. 以...作基础；a. 卑鄙的, 低劣的； 基准"
+    },
+    {
+      "id": 22,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 军队」对应的单词：",
+      "options": [
+        "ask",
+        "light",
+        "military",
+        "school"
+      ],
+      "answer": 2,
+      "explanation": "military /'militәri/ n. 军队；a. 军事的, 军人的, 适于战争的"
+    },
+    {
+      "id": 23,
+      "category": "基础词汇",
+      "question": "选择单词 position 的正确中文释义：",
+      "options": [
+        "n. 位置, 地位, 身分, 形势, 姿势…",
+        "n. 女儿",
+        "n. 意志, 决心, 意愿, 意向, 干劲…",
+        "n. 等待, 等候"
+      ],
+      "answer": 0,
+      "explanation": "position /pә'ziʃәn/ n. 位置, 地位, 身分, 形势, 姿势, 立场, 职位, 状态, 阵地；vt. 安置, 决定...的位置…"
+    },
+    {
+      "id": 24,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 等待, 等候」对应的单词：",
+      "options": [
+        "what",
+        "wait",
+        "light",
+        "history"
+      ],
+      "answer": 1,
+      "explanation": "wait /weit/ n. 等待, 等候；vt. 等候, 期待, 延缓, 伺候, 推迟；vi. 等, 等候, 耽搁, 伺候用餐…"
+    },
+    {
+      "id": 25,
+      "category": "基础词汇",
+      "question": "选择单词 know 的正确中文释义：",
+      "options": [
+        "a. 远的, 久远的, 遥远的",
+        "v. 知道, 了解, 认识, 确信",
+        "adv. 为什么",
+        "adv. 不, 非, 未"
+      ],
+      "answer": 1,
+      "explanation": "know /nәu/ v. 知道, 了解, 认识, 确信"
+    },
+    {
+      "id": 26,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 软片, 薄膜, 胶卷, 电影」对应的单词：",
+      "options": [
+        "what",
+        "film",
+        "ask",
+        "his"
+      ],
+      "answer": 1,
+      "explanation": "film /film/ n. 软片, 薄膜, 胶卷, 电影；vt. 覆以薄膜, 拍摄；vi. 生薄膜, 拍电影"
+    },
+    {
+      "id": 27,
+      "category": "基础词汇",
+      "question": "选择单词 really 的正确中文释义：",
+      "options": [
+        "n. 油, 石油, 油画颜料",
+        "n. 变化, 找回的零钱, 找头, 更换",
+        "adv. 实际上, 真实地, 实在",
+        "n. 比率, 率, 速度, 价格, 费用…"
+      ],
+      "answer": 2,
+      "explanation": "really /'riәli/ adv. 实际上, 真实地, 实在"
+    },
+    {
+      "id": 28,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 时间, 时侯, 时机, 时期, 期限…」对应的单词：",
+      "options": [
+        "will",
+        "time",
+        "source",
+        "wall"
+      ],
+      "answer": 1,
+      "explanation": "time /taim/ n. 时间, 时侯, 时机, 时期, 期限, 次数, 节拍, 暂停, 规定时间…"
+    },
+    {
+      "id": 29,
+      "category": "基础词汇",
+      "question": "选择单词 company 的正确中文释义：",
+      "options": [
+        "n. 公司, 友伴, 交往, 连队, 朋友…",
+        "n. 路, 路线, 路途, 方法, 道路…",
+        "pl. 资料, 数据",
+        "prep. 除了"
+      ],
+      "answer": 0,
+      "explanation": "company /'kʌmpәni/ n. 公司, 友伴, 交往, 连队, 朋友, 一群；vt. 陪伴；vi. 交往"
+    },
+    {
+      "id": 30,
+      "category": "基础词汇",
+      "question": "选择与释义「pron. 什么」对应的单词：",
+      "options": [
+        "what",
+        "get",
+        "daughter",
+        "source"
+      ],
+      "answer": 0,
+      "explanation": "what /hwɒt/ pron. 什么；interj. 怎么, 多么；a. 什么的；adv. 到什么程度"
+    },
+    {
+      "id": 31,
+      "category": "基础词汇",
+      "question": "选择单词 way 的正确中文释义：",
+      "options": [
+        "n. 法律, 法则, 定律, 法律的制约…",
+        "n. 路, 路线, 路途, 方法, 道路…",
+        "n. 意志, 决心, 意愿, 意向, 干劲…",
+        "vt. 得到, 获得, 变成, 使得…"
+      ],
+      "answer": 1,
+      "explanation": "way /wei/ n. 路, 路线, 路途, 方法, 道路, 情形, 规模, 习惯, 行业, 方面；adv. 远远地, 非常"
+    },
+    {
+      "id": 32,
+      "category": "基础词汇",
+      "question": "选择与释义「pl. 资料, 数据」对应的单词：",
+      "options": [
+        "get",
+        "data",
+        "now",
+        "sport"
+      ],
+      "answer": 1,
+      "explanation": "data /'deitә/ pl. 资料, 数据； 数据; DOS内部命令:用于显示或设定系统的日期"
+    },
+    {
+      "id": 33,
+      "category": "基础词汇",
+      "question": "选择单词 attention 的正确中文释义：",
+      "options": [
+        "n. 等待, 等候",
+        "vt. 放, 摆, 安置, 移动, 发射…",
+        "n. 注意, 注意力",
+        "n. 电脑, 电子计算机"
+      ],
+      "answer": 2,
+      "explanation": "attention /ә'tenʃәn/ n. 注意, 注意力； 引起注意信号"
+    },
+    {
+      "id": 34,
+      "category": "基础词汇",
+      "question": "选择与释义「v. 建立, 建筑」对应的单词：",
+      "options": [
+        "back",
+        "build",
+        "data",
+        "cover"
+      ],
+      "answer": 1,
+      "explanation": "build /bild/ v. 建立, 建筑；n. 构造, 体格"
+    },
+    {
+      "id": 35,
+      "category": "基础词汇",
+      "question": "选择单词 oil 的正确中文释义：",
+      "options": [
+        "n. 父亲, 祖先, 长辈, 神父, 创始者",
+        "n. 公开, 户外, 空旷",
+        "n. 公司, 友伴, 交往, 连队, 朋友…",
+        "n. 油, 石油, 油画颜料"
+      ],
+      "answer": 3,
+      "explanation": "oil /ɒil/ n. 油, 石油, 油画颜料；vt. 涂油于, 使融化成油状, 加油于；vi. 加燃油, 融化"
+    },
+    {
+      "id": 36,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 墙, 墙壁, 垣, 内壁, 分界物…」对应的单词：",
+      "options": [
+        "increase",
+        "why",
+        "wall",
+        "cover"
+      ],
+      "answer": 2,
+      "explanation": "wall /wɒ:l/ n. 墙, 墙壁, 垣, 内壁, 分界物, 屏障；a. 墙的；vt. 给...建墙, 禁闭, 用墙围住…"
+    },
+    {
+      "id": 37,
+      "category": "基础词汇",
+      "question": "选择单词 without 的正确中文释义：",
+      "options": [
+        "n. 公众, 民众",
+        "n. 公开, 户外, 空旷",
+        "prep. 没有, 不, 在...之外",
+        "n. 比率, 率, 速度, 价格, 费用…"
+      ],
+      "answer": 2,
+      "explanation": "without /wi'ðaut/ prep. 没有, 不, 在...之外；adv. 在外面, 户外；n. 外面, 外部"
+    },
+    {
+      "id": 38,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 精选, 选择, 掘, 精华, 牙签…」对应的单词：",
+      "options": [
+        "pick",
+        "food",
+        "control",
+        "get"
+      ],
+      "answer": 0,
+      "explanation": "pick /pik/ n. 精选, 选择, 掘, 精华, 牙签, 鹤嘴锄；v. 摘, 掘, 凿, 挖, 挑选； 拾取"
+    },
+    {
+      "id": 39,
+      "category": "基础词汇",
+      "question": "选择单词 put 的正确中文释义：",
+      "options": [
+        "adv. 不, 非, 未",
+        "vt. 放, 摆, 安置, 移动, 发射…",
+        "n. 位置, 场所, 地点",
+        "n. 油, 石油, 油画颜料"
+      ],
+      "answer": 1,
+      "explanation": "put /put/ vt. 放, 摆, 安置, 移动, 发射, 投掷, 写上, 表达, 使从事, 使受到, 驱使, 赋予…"
+    },
+    {
+      "id": 40,
+      "category": "基础词汇",
+      "question": "选择与释义「vi. 继续, 延续, 延长」对应的单词：",
+      "options": [
+        "why",
+        "far",
+        "public",
+        "continue"
+      ],
+      "answer": 3,
+      "explanation": "continue /kәn'tinju:/ vi. 继续, 延续, 延长；vt. 使继续, 使延长"
+    },
+    {
+      "id": 41,
+      "category": "基础词汇",
+      "question": "选择单词 each 的正确中文释义：",
+      "options": [
+        "a. 远的, 久远的, 遥远的",
+        "pron. 这些",
+        "n. 冒险, 危险, 保险额",
+        "a. 每个, 每一"
+      ],
+      "answer": 3,
+      "explanation": "each /i:tʃ/ a. 每个, 每一；adv. 每个；pron. 每个, 个人, 各自"
+    },
+    {
+      "id": 42,
+      "category": "基础词汇",
+      "question": "选择与释义「adv. 为什么」对应的单词：",
+      "options": [
+        "daughter",
+        "public",
+        "appear",
+        "why"
+      ],
+      "answer": 3,
+      "explanation": "why /hwai/ adv. 为什么；n. 原因, 理由"
+    },
+    {
+      "id": 43,
+      "category": "基础词汇",
+      "question": "选择单词 risk 的正确中文释义：",
+      "options": [
+        "v. 建立, 建筑",
+        "adv. 曾经, 究竟, 永远",
+        "n. 软片, 薄膜, 胶卷, 电影",
+        "n. 冒险, 危险, 保险额"
+      ],
+      "answer": 3,
+      "explanation": "risk /risk/ n. 冒险, 危险, 保险额；vt. 冒...的危险, 冒险干"
+    },
+    {
+      "id": 44,
+      "category": "基础词汇",
+      "question": "选择与释义「a. 后面的」对应的单词：",
+      "options": [
+        "film",
+        "back",
+        "whole",
+        "ask"
+      ],
+      "answer": 1,
+      "explanation": "back /bæk/ a. 后面的；vt. 使后退, 支持；vi. 倒退, 背靠；adv. 向后地；n. 背部, 后面"
+    },
+    {
+      "id": 45,
+      "category": "基础词汇",
+      "question": "选择单词 far 的正确中文释义：",
+      "options": [
+        "a. 远的, 久远的, 遥远的",
+        "a. 迟的, 晚的, 已故的",
+        "n. 精选, 选择, 掘, 精华, 牙签…",
+        "pron. 那些"
+      ],
+      "answer": 0,
+      "explanation": "far /fɑ:/ a. 远的, 久远的, 遥远的；adv. 甚远地, 很, 到很深的程度, 到很远的距离"
+    },
+    {
+      "id": 46,
+      "category": "基础词汇",
+      "question": "选择与释义「vt. 装罐」对应的单词：",
+      "options": [
+        "large",
+        "can",
+        "fight",
+        "open"
+      ],
+      "answer": 1,
+      "explanation": "can /kæn/ vt. 装罐；n. 罐头, 容器；aux. 能, 可以； 作废字符"
+    },
+    {
+      "id": 47,
+      "category": "基础词汇",
+      "question": "选择单词 some 的正确中文释义：",
+      "options": [
+        "adv. 最后, 终于",
+        "pron. 这些",
+        "pron. 一些, 一部分, 若干",
+        "n. 路, 路线, 路途, 方法, 道路…"
+      ],
+      "answer": 2,
+      "explanation": "some /sʌm/ pron. 一些, 一部分, 若干；adv. 大约；a. 一些的, 少许的, 某一的"
+    },
+    {
+      "id": 48,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 来源, 水源, 根源, 原始资料, 源」对应的单词：",
+      "options": [
+        "will",
+        "pull",
+        "source",
+        "school"
+      ],
+      "answer": 2,
+      "explanation": "source /sɒ:s/ n. 来源, 水源, 根源, 原始资料, 源； 来源, 源程序"
+    },
+    {
+      "id": 49,
+      "category": "基础词汇",
+      "question": "选择单词 rate 的正确中文释义：",
+      "options": [
+        "n. 材料, 物资, 素材, 布料, 资料",
+        "v. 知道, 了解, 认识, 确信",
+        "n. 比率, 率, 速度, 价格, 费用…",
+        "n. 油, 石油, 油画颜料"
+      ],
+      "answer": 2,
+      "explanation": "rate /reit/ n. 比率, 率, 速度, 价格, 费用, 等级；vt. 估价, 认为, 鉴定等级, 责骂…"
+    },
+    {
+      "id": 50,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 增加, 增进, 利益」对应的单词：",
+      "options": [
+        "increase",
+        "money",
+        "represent",
+        "business"
+      ],
+      "answer": 0,
+      "explanation": "increase /in'kri:s/ n. 增加, 增进, 利益；vt. 增加, 加大；vi. 增加, 繁殖"
+    },
+    {
+      "id": 51,
+      "category": "基础词汇",
+      "question": "选择单词 change 的正确中文释义：",
+      "options": [
+        "n. 控制, 管理, 克制, 控制器…",
+        "vt. 了解, 实现, 使显得逼真, 变卖",
+        "n. 变化, 找回的零钱, 找头, 更换",
+        "n. 打架, 争吵, 斗志"
+      ],
+      "answer": 2,
+      "explanation": "change /tʃeindʒ/ n. 变化, 找回的零钱, 找头, 更换；vt. 改变, 更换, 兑换"
+    },
+    {
+      "id": 52,
+      "category": "基础词汇",
+      "question": "选择与释义「prep. 在...之间」对应的单词：",
+      "options": [
+        "position",
+        "really",
+        "between",
+        "his"
+      ],
+      "answer": 2,
+      "explanation": "between /bi'twi:n/ prep. 在...之间"
+    },
+    {
+      "id": 53,
+      "category": "基础词汇",
+      "question": "选择单词 himself 的正确中文释义：",
+      "options": [
+        "n. 角色, 职责, 任务",
+        "n. 材料, 物资, 素材, 布料, 资料",
+        "n. 进位, 射程, 运载",
+        "pron. 他自己, 他亲自"
+      ],
+      "answer": 3,
+      "explanation": "himself /him'self/ pron. 他自己, 他亲自"
+    },
+    {
+      "id": 54,
+      "category": "基础词汇",
+      "question": "选择与释义「vi. 发生, 发生, 恰巧」对应的单词：",
+      "options": [
+        "here",
+        "now",
+        "wall",
+        "happen"
+      ],
+      "answer": 3,
+      "explanation": "happen /'hæpәn/ vi. 发生, 发生, 恰巧"
+    },
+    {
+      "id": 55,
+      "category": "基础词汇",
+      "question": "选择单词 site 的正确中文释义：",
+      "options": [
+        "vt. 了解, 实现, 使显得逼真, 变卖",
+        "n. 位置, 场所, 地点",
+        "n. 变化, 找回的零钱, 找头, 更换",
+        "n. 食物, 养料"
+      ],
+      "answer": 1,
+      "explanation": "site /sait/ n. 位置, 场所, 地点；vt. 给...择址"
+    },
+    {
+      "id": 56,
+      "category": "基础词汇",
+      "question": "选择与释义「vt. 卖, 背叛, 销售, 出卖」对应的单词：",
+      "options": [
+        "sell",
+        "data",
+        "including",
+        "rate"
+      ],
+      "answer": 0,
+      "explanation": "sell /sel/ vt. 卖, 背叛, 销售, 出卖；vi. 卖, 销售；n. 卖, 推销术, 失望"
+    },
+    {
+      "id": 57,
+      "category": "基础词汇",
+      "question": "选择单词 have 的正确中文释义：",
+      "options": [
+        "n. 注意, 注意力",
+        "n. 公开, 户外, 空旷",
+        "pron. 她",
+        "vt. 有, 怀有, 拿, 进行"
+      ],
+      "answer": 3,
+      "explanation": "have /hæv/ vt. 有, 怀有, 拿, 进行；aux. 已经"
+    },
+    {
+      "id": 58,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 电脑, 电子计算机」对应的单词：",
+      "options": [
+        "computer",
+        "ask",
+        "military",
+        "food"
+      ],
+      "answer": 0,
+      "explanation": "computer /kәm'pju:tә/ n. 电脑, 电子计算机； 计算机"
+    },
+    {
+      "id": 59,
+      "category": "基础词汇",
+      "question": "选择单词 public 的正确中文释义：",
+      "options": [
+        "n. 女儿",
+        "n. 金钱, 一笔款, 财富, 货币, 金额",
+        "n. 公众, 民众",
+        "n. 公司, 友伴, 交往, 连队, 朋友…"
+      ],
+      "answer": 2,
+      "explanation": "public /'pʌblik/ n. 公众, 民众；a. 公众的, 公共的, 公立的, 公用的"
+    },
+    {
+      "id": 60,
+      "category": "基础词汇",
+      "question": "选择与释义「vt. 了解, 实现, 使显得逼真, 变卖」对应的单词：",
+      "options": [
+        "realize",
+        "ever",
+        "will",
+        "father"
+      ],
+      "answer": 0,
+      "explanation": "realize /'riәlaiz/ vt. 了解, 实现, 使显得逼真, 变卖；vi. 变卖"
+    },
+    {
+      "id": 61,
+      "category": "基础词汇",
+      "question": "选择单词 pull 的正确中文释义：",
+      "options": [
+        "pron. 这些",
+        "vt. 拉, 拖, 拔, 牵, 撕开, 吸引",
+        "a. 每个, 每一",
+        "n. 显示, 表现, 展览, 卖弄, 炫耀…"
+      ],
+      "answer": 1,
+      "explanation": "pull /pul/ vt. 拉, 拖, 拔, 牵, 撕开, 吸引；vi. 拉, 拖, 拔, 有吸引力…"
+    },
+    {
+      "id": 62,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 教育, 训练, 教育学」对应的单词：",
+      "options": [
+        "have",
+        "money",
+        "education",
+        "way"
+      ],
+      "answer": 2,
+      "explanation": "education /.edju'keiʃәn/ n. 教育, 训练, 教育学； 教育, 训练"
+    },
+    {
+      "id": 63,
+      "category": "基础词汇",
+      "question": "选择单词 law 的正确中文释义：",
+      "options": [
+        "n. 角色, 职责, 任务",
+        "n. 充足, 够, 很多",
+        "adv. 现在, 刚才, 目前",
+        "n. 法律, 法则, 定律, 法律的制约…"
+      ],
+      "answer": 3,
+      "explanation": "law /lɒ:/ n. 法律, 法则, 定律, 法律的制约, 法学, 司法界, 诉讼；v. 起诉"
+    },
+    {
+      "id": 64,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 食物, 养料」对应的单词：",
+      "options": [
+        "risk",
+        "but",
+        "food",
+        "recent"
+      ],
+      "answer": 2,
+      "explanation": "food /fu:d/ n. 食物, 养料； 食物, 食品"
+    },
+    {
+      "id": 65,
+      "category": "基础词汇",
+      "question": "选择单词 whole 的正确中文释义：",
+      "options": [
+        "pron. 她",
+        "n. 全部, 全体, 整体, 完全之体系",
+        "a. 每个, 每一",
+        "adv. 在这里, 此时, 这里"
+      ],
+      "answer": 1,
+      "explanation": "whole /hәul/ n. 全部, 全体, 整体, 完全之体系；a. 所有的, 完整的, 完全的, 纯粹的"
+    },
+    {
+      "id": 66,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 运动, 游戏, 娱乐, 消遣, 玩笑」对应的单词：",
+      "options": [
+        "what",
+        "ask",
+        "sport",
+        "build"
+      ],
+      "answer": 2,
+      "explanation": "sport /spɒ:t/ n. 运动, 游戏, 娱乐, 消遣, 玩笑；a. 运动的, 户外穿戴的…"
+    },
+    {
+      "id": 67,
+      "category": "基础词汇",
+      "question": "选择单词 these 的正确中文释义：",
+      "options": [
+        "n. 宴会, 党, 政党, 团体, 当事人…",
+        "n. 底部, 垒, 基础, 基地",
+        "pron. 这些",
+        "vi. 出现, 显得, 来到"
+      ],
+      "answer": 2,
+      "explanation": "these /ði:z/ pron. 这些"
+    },
+    {
+      "id": 68,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 施行, 工作情况, 成绩, 行为…」对应的单词：",
+      "options": [
+        "enough",
+        "law",
+        "sport",
+        "performance"
+      ],
+      "answer": 3,
+      "explanation": "performance /pә'fɒ:mәns/ n. 施行, 工作情况, 成绩, 行为, 表现, 演出； 绩效, 性能"
+    },
+    {
+      "id": 69,
+      "category": "基础词汇",
+      "question": "选择单词 control 的正确中文释义：",
+      "options": [
+        "v. 建立, 建筑",
+        "n. 底部, 垒, 基础, 基地",
+        "n. 控制, 管理, 克制, 控制器…",
+        "n. 意志, 决心, 意愿, 意向, 干劲…"
+      ],
+      "answer": 2,
+      "explanation": "control /kәn'trәul/ n. 控制, 管理, 克制, 控制器, 操纵装置；vt. 控制, 操纵, 抑制； 控制; 控制器"
+    },
+    {
+      "id": 70,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 女儿」对应的单词：",
+      "options": [
+        "daughter",
+        "will",
+        "time",
+        "company"
+      ],
+      "answer": 0,
+      "explanation": "daughter /'dɒ:tә/ n. 女儿；a. 女儿的"
+    },
+    {
+      "id": 71,
+      "category": "基础词汇",
+      "question": "选择单词 recent 的正确中文释义：",
+      "options": [
+        "pron. 他自己, 他亲自",
+        "a. 最近的, 近代的, 最新的",
+        "adv. 最后, 终于",
+        "n. 比率, 率, 速度, 价格, 费用…"
+      ],
+      "answer": 1,
+      "explanation": "recent /'ri:snt/ a. 最近的, 近代的, 最新的； 最近的, 新进的"
+    },
+    {
+      "id": 72,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 学校, 鱼群, 门派, 学派」对应的单词：",
+      "options": [
+        "why",
+        "school",
+        "public",
+        "food"
+      ],
+      "answer": 1,
+      "explanation": "school /sku:l/ n. 学校, 鱼群, 门派, 学派；vt. 教育, 训练, 培养；vi. 成群地游"
+    },
+    {
+      "id": 73,
+      "category": "基础词汇",
+      "question": "选择单词 voice 的正确中文释义：",
+      "options": [
+        "n. 声音, 嗓音, 嗓子, 愿望…",
+        "v. 知道, 了解, 认识, 确信",
+        "pron. 什么",
+        "pron. 一些, 一部分, 若干"
+      ],
+      "answer": 0,
+      "explanation": "voice /vɒis/ n. 声音, 嗓音, 嗓子, 愿望, 发言权, 表达, 喉舌, 语态；vt. 表达, 吐露, 调音"
+    },
+    {
+      "id": 74,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 盖子, 封面, 藉口」对应的单词：",
+      "options": [
+        "cover",
+        "each",
+        "education",
+        "position"
+      ],
+      "answer": 0,
+      "explanation": "cover /'kʌvә/ n. 盖子, 封面, 藉口；vt. 覆盖, 掩饰, 保护, 掩护, 包括；vi. 覆盖"
+    },
+    {
+      "id": 75,
+      "category": "基础词汇",
+      "question": "选择单词 party 的正确中文释义：",
+      "options": [
+        "n. 精选, 选择, 掘, 精华, 牙签…",
+        "n. 宴会, 党, 政党, 团体, 当事人…",
+        "vi. 发生, 发生, 恰巧",
+        "n. 历史, 过去, 经历, 发展过程…"
+      ],
+      "answer": 1,
+      "explanation": "party /'pɑ:ti/ n. 宴会, 党, 政党, 团体, 当事人, 聚会；v. 举办聚会"
+    },
+    {
+      "id": 76,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 材料, 物资, 素材, 布料, 资料」对应的单词：",
+      "options": [
+        "law",
+        "between",
+        "school",
+        "material"
+      ],
+      "answer": 3,
+      "explanation": "material /mә'tiәriәl/ n. 材料, 物资, 素材, 布料, 资料；a. 物质的, 肉体的, 重要的"
+    },
+    {
+      "id": 77,
+      "category": "基础词汇",
+      "question": "选择单词 finally 的正确中文释义：",
+      "options": [
+        "pron. 一些, 一部分, 若干",
+        "adv. 最后, 终于",
+        "v. 建立, 建筑",
+        "vt. 有, 怀有, 拿, 进行"
+      ],
+      "answer": 1,
+      "explanation": "finally /'fainәli/ adv. 最后, 终于"
+    },
+    {
+      "id": 78,
+      "category": "基础词汇",
+      "question": "选择与释义「a. 单身的, 单程的, 单一的, 个别的…」对应的单词：",
+      "options": [
+        "can",
+        "without",
+        "single",
+        "public"
+      ],
+      "answer": 2,
+      "explanation": "single /'siŋgl/ a. 单身的, 单程的, 单一的, 个别的, 孤独的, 专一的；n. 一个, 单打, 单程票；vt. 选出…"
+    },
+    {
+      "id": 79,
+      "category": "基础词汇",
+      "question": "选择单词 per 的正确中文释义：",
+      "options": [
+        "vt. 拉, 拖, 拔, 牵, 撕开, 吸引",
+        "a. 最近的, 近代的, 最新的",
+        "prep. 每一, 通过, 经, 按照",
+        "n. 金钱, 一笔款, 财富, 货币, 金额"
+      ],
+      "answer": 2,
+      "explanation": "per /pә:/ prep. 每一, 通过, 经, 按照； 每, 按照"
+    },
+    {
+      "id": 80,
+      "category": "基础词汇",
+      "question": "选择与释义「adv. 现在, 刚才, 目前」对应的单词：",
+      "options": [
+        "business",
+        "appear",
+        "now",
+        "father"
+      ],
+      "answer": 2,
+      "explanation": "now /nau/ adv. 现在, 刚才, 目前；n. 现在；a. 现在的；conj. 由于"
+    },
+    {
+      "id": 81,
+      "category": "基础词汇",
+      "question": "选择单词 get 的正确中文释义：",
+      "options": [
+        "n. 食物, 养料",
+        "pron. 他的",
+        "vt. 得到, 获得, 变成, 使得…",
+        "a. 单身的, 单程的, 单一的, 个别的…"
+      ],
+      "answer": 2,
+      "explanation": "get /get/ vt. 得到, 获得, 变成, 使得, 收获, 接通, 抓住, 染上；vi. 到达, 成为, 变得…"
+    },
+    {
+      "id": 82,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 情形, 情况, 箱, 容器, 事实…」对应的单词：",
+      "options": [
+        "sell",
+        "realize",
+        "case",
+        "per"
+      ],
+      "answer": 2,
+      "explanation": "case /keis/ n. 情形, 情况, 箱, 容器, 事实, 病例, 案例, 框子；vt. 装箱, 包盖"
+    },
+    {
+      "id": 83,
+      "category": "基础词汇",
+      "question": "选择单词 show 的正确中文释义：",
+      "options": [
+        "n. 电脑, 电子计算机",
+        "prep. 在...之间",
+        "v. 建立, 建筑",
+        "n. 显示, 表现, 展览, 卖弄, 炫耀…"
+      ],
+      "answer": 3,
+      "explanation": "show /ʃәu/ n. 显示, 表现, 展览, 卖弄, 炫耀, 外观, 演出, 洋相…"
+    },
+    {
+      "id": 84,
+      "category": "基础词汇",
+      "question": "选择与释义「prep. 在...之中」对应的单词：",
+      "options": [
+        "among",
+        "wait",
+        "wall",
+        "attention"
+      ],
+      "answer": 0,
+      "explanation": "among /ә'mʌŋ/ prep. 在...之中"
+    },
+    {
+      "id": 85,
+      "category": "基础词汇",
+      "question": "选择单词 almost 的正确中文释义：",
+      "options": [
+        "pron. 什么",
+        "adv. 几乎, 差不多",
+        "n. 学校, 鱼群, 门派, 学派",
+        "n. 情形, 情况, 箱, 容器, 事实…"
+      ],
+      "answer": 1,
+      "explanation": "almost /'ɒ:lmәust/ adv. 几乎, 差不多"
+    },
+    {
+      "id": 86,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 公开, 户外, 空旷」对应的单词：",
+      "options": [
+        "open",
+        "why",
+        "light",
+        "recent"
+      ],
+      "answer": 0,
+      "explanation": "open /'әupәn/ n. 公开, 户外, 空旷；a. 开着的, 开放的, 开阔的, 营业着的, 公开的, 悬而未决的…"
+    },
+    {
+      "id": 87,
+      "category": "基础词汇",
+      "question": "选择单词 carry 的正确中文释义：",
+      "options": [
+        "adv. 最后, 终于",
+        "n. 进位, 射程, 运载",
+        "n. 打架, 争吵, 斗志",
+        "vt. 有, 怀有, 拿, 进行"
+      ],
+      "answer": 1,
+      "explanation": "carry /'kæri/ n. 进位, 射程, 运载；vt. 携带, 运送, 支持, 传送, 包含；vi. 被携带, 能达到…"
+    },
+    {
+      "id": 88,
+      "category": "基础词汇",
+      "question": "选择与释义「a. 相符的, 根据...而定的」对应的单词：",
+      "options": [
+        "site",
+        "sport",
+        "according",
+        "ever"
+      ],
+      "answer": 2,
+      "explanation": "according /ә'kɒ:diŋ/ a. 相符的, 根据...而定的；adv. 相应地"
+    },
+    {
+      "id": 89,
+      "category": "基础词汇",
+      "question": "选择单词 role 的正确中文释义：",
+      "options": [
+        "adv. 几乎, 差不多",
+        "n. 角色, 职责, 任务",
+        "prep. 包含, 包括",
+        "pron. 一些, 一部分, 若干"
+      ],
+      "answer": 1,
+      "explanation": "role /rәul/ n. 角色, 职责, 任务； 作用, 功用"
+    },
+    {
+      "id": 90,
+      "category": "基础词汇",
+      "question": "选择与释义「aux. 应该, 将要」对应的单词：",
+      "options": [
+        "time",
+        "should",
+        "himself",
+        "fight"
+      ],
+      "answer": 1,
+      "explanation": "should /ʃud/ aux. 应该, 将要"
+    },
+    {
+      "id": 91,
+      "category": "基础词汇",
+      "question": "选择单词 enough 的正确中文释义：",
+      "options": [
+        "n. 充足, 够, 很多",
+        "a. 每个, 每一",
+        "n. 等待, 等候",
+        "n. 来源, 水源, 根源, 原始资料, 源"
+      ],
+      "answer": 0,
+      "explanation": "enough /i'nʌf/ n. 充足, 够, 很多；a. 充足的, 足够；adv. 足够；interj. 够了"
+    },
+    {
+      "id": 92,
+      "category": "基础词汇",
+      "question": "选择与释义「pron. 她」对应的单词：",
+      "options": [
+        "she",
+        "attention",
+        "risk",
+        "voice"
+      ],
+      "answer": 0,
+      "explanation": "she /ʃi:/ pron. 她"
+    },
+    {
+      "id": 93,
+      "category": "基础词汇",
+      "question": "选择单词 including 的正确中文释义：",
+      "options": [
+        "prep. 包含, 包括",
+        "n. 公众, 民众",
+        "n. 公司, 友伴, 交往, 连队, 朋友…",
+        "n. 冒险, 危险, 保险额"
+      ],
+      "answer": 0,
+      "explanation": "including // prep. 包含, 包括； 包括, 算入"
+    },
+    {
+      "id": 94,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 历史, 过去, 经历, 发展过程…」对应的单词：",
+      "options": [
+        "far",
+        "recent",
+        "history",
+        "pull"
+      ],
+      "answer": 2,
+      "explanation": "history /'histәri/ n. 历史, 过去, 经历, 发展过程, 历史学, 过去的事, 历史记录； 历史记录"
+    },
+    {
+      "id": 95,
+      "category": "基础词汇",
+      "question": "选择单词 but 的正确中文释义：",
+      "options": [
+        "prep. 除了",
+        "vt. 得到, 获得, 变成, 使得…",
+        "a. 相符的, 根据...而定的",
+        "a. 最近的, 近代的, 最新的"
+      ],
+      "answer": 0,
+      "explanation": "but /bʌt/ prep. 除了；conj. 但是；adv. 仅仅"
+    },
+    {
+      "id": 96,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 金钱, 一笔款, 财富, 货币, 金额」对应的单词：",
+      "options": [
+        "but",
+        "oil",
+        "money",
+        "school"
+      ],
+      "answer": 2,
+      "explanation": "money /'mʌni/ n. 金钱, 一笔款, 财富, 货币, 金额； 货币, 金钱, 财产"
+    },
+    {
+      "id": 97,
+      "category": "基础词汇",
+      "question": "选择单词 all 的正确中文释义：",
+      "options": [
+        "n. 显示, 表现, 展览, 卖弄, 炫耀…",
+        "a. 所有的, 全部的, 一切的",
+        "n. 星期, 周",
+        "n. 时间, 时侯, 时机, 时期, 期限…"
+      ],
+      "answer": 1,
+      "explanation": "all /ɒ:l/ a. 所有的, 全部的, 一切的；adv. 全部, 全然；pron. 全部；n. 全部"
+    },
+    {
+      "id": 98,
+      "category": "基础词汇",
+      "question": "选择与释义「vi. 问, 要求」对应的单词：",
+      "options": [
+        "ask",
+        "change",
+        "all",
+        "enough"
+      ],
+      "answer": 0,
+      "explanation": "ask /ɑ:sk/ vi. 问, 要求；vt. 问, 要求, 邀请, 需要"
+    },
+    {
+      "id": 99,
+      "category": "基础词汇",
+      "question": "选择单词 here 的正确中文释义：",
+      "options": [
+        "a. 每个, 每一",
+        "adv. 曾经, 究竟, 永远",
+        "adv. 在这里, 此时, 这里",
+        "n. 充足, 够, 很多"
+      ],
+      "answer": 2,
+      "explanation": "here /hiә/ adv. 在这里, 此时, 这里；n. 这里"
+    },
+    {
+      "id": 100,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 生意, 事情, 业务, 商业, 商行…」对应的单词：",
+      "options": [
+        "week",
+        "business",
+        "money",
+        "should"
+      ],
+      "answer": 1,
+      "explanation": "business /'biznis/ n. 生意, 事情, 业务, 商业, 商行, 职责； 企业, 商业, 营业"
+    },
+    {
+      "id": 101,
+      "category": "基础词汇",
+      "question": "选择单词 those 的正确中文释义：",
+      "options": [
+        "vt. 得到, 获得, 变成, 使得…",
+        "n. 来源, 水源, 根源, 原始资料, 源",
+        "pron. 那些",
+        "n. 女儿"
+      ],
+      "answer": 2,
+      "explanation": "those /ðәuz/ pron. 那些"
+    },
+    {
+      "id": 102,
+      "category": "基础词汇",
+      "question": "选择与释义「n. 父亲, 祖先, 长辈, 神父, 创始者」对应的单词：",
+      "options": [
+        "fight",
+        "enough",
+        "light",
+        "father"
+      ],
+      "answer": 3,
+      "explanation": "father /'fɑ:ðә/ n. 父亲, 祖先, 长辈, 神父, 创始者；vt. 当...的父亲, 保护, 创作, 发明, 培养"
+    },
+    {
+      "id": 103,
+      "category": "基础词汇",
+      "question": "选择单词 better 的正确中文释义：",
+      "options": [
+        "a. 较好的",
+        "n. 历史, 过去, 经历, 发展过程…",
+        "adv. 在这里, 此时, 这里",
+        "n. 声音, 嗓音, 嗓子, 愿望…"
+      ],
+      "answer": 0,
+      "explanation": "better /'betә/ a. 较好的；adv. 比较好"
+    },
+    {
+      "id": 104,
+      "category": "基础词汇",
+      "question": "选择与释义「adv. 曾经, 究竟, 永远」对应的单词：",
+      "options": [
+        "here",
+        "far",
+        "appear",
+        "ever"
+      ],
+      "answer": 3,
+      "explanation": "ever /'evә/ adv. 曾经, 究竟, 永远"
+    },
+    {
+      "id": 105,
+      "category": "基础词汇",
+      "question": "选择单词 fight 的正确中文释义：",
+      "options": [
+        "n. 打架, 争吵, 斗志",
+        "adv. 在这里, 此时, 这里",
+        "n. 路, 路线, 路途, 方法, 道路…",
+        "vt. 有, 怀有, 拿, 进行"
+      ],
+      "answer": 0,
+      "explanation": "fight /fait/ n. 打架, 争吵, 斗志；v. 对抗, 打架"
     }
   ]
 }
