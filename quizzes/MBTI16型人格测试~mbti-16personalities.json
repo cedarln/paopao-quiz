@@ -1,0 +1,800 @@
+{
+ "version": "1.0",
+ "key": "mbti-16personalities",
+ "name": "MBTI16型人格测试",
+ "icon": "🧠",
+ "description": "48题经典四维度人格测评（外向/内向 · 实感/直觉 · 思考/情感 · 判断/知觉），测出你的16型人格",
+ "category": "assessment",
+ "type": "assessment",
+ "resultMode": "combine",
+ "dimensions": [
+  [
+   "E",
+   "I"
+  ],
+  [
+   "S",
+   "N"
+  ],
+  [
+   "T",
+   "F"
+  ],
+  [
+   "J",
+   "P"
+  ]
+ ],
+ "results": [
+  {
+   "key": "INTJ",
+   "icon": "🧠",
+   "title": "INTJ · 策略家",
+   "description": "你独立、有远见，喜欢用逻辑构建长期计划。天生的策略思维让你擅长系统设计与深度研究，适合科研、架构设计、战略咨询等方向。给你的建议：大胆分享你的构想，别只放在脑子里。"
+  },
+  {
+   "key": "INTP",
+   "icon": "🔬",
+   "title": "INTP · 逻辑学家",
+   "description": "你好奇、爱钻研，对原理和概念有天然的兴趣。适合研究、编程、哲学、数据分析等需要深度思考的领域。给你的建议：把想法落地成行动，会释放你更大的潜力。"
+  },
+  {
+   "key": "ENTJ",
+   "icon": "👑",
+   "title": "ENTJ · 指挥官",
+   "description": "你果断、有领导力，善于制定目标并推动团队达成。适合管理、创业、项目管理等方向。给你的建议：多倾听他人的感受，你的团队会更凝聚。"
+  },
+  {
+   "key": "ENTP",
+   "icon": "💡",
+   "title": "ENTP · 辩论家",
+   "description": "你思维跳跃、点子多，喜欢挑战常规、探索可能性。适合创新、市场、产品、咨询等方向。给你的建议：选定一个想法坚持到底，胜过同时追十个点子。"
+  },
+  {
+   "key": "INFJ",
+   "icon": "🌙",
+   "title": "INFJ · 提倡者",
+   "description": "你理想主义又洞察人心，渴望做有意义的事。适合心理咨询、教育、写作、公益等方向。给你的建议：照顾好自己，才能更好地照亮别人。"
+  },
+  {
+   "key": "INFP",
+   "icon": "🎨",
+   "title": "INFP · 调停者",
+   "description": "你内心丰富、重视价值观与真诚。适合创作、设计、人文研究、心理健康等方向。给你的建议：给理想加上一点执行计划，它会走得更远。"
+  },
+  {
+   "key": "ENFJ",
+   "icon": "🌟",
+   "title": "ENFJ · 主人公",
+   "description": "你热情、有感染力，天生擅长鼓舞和联结他人。适合教育、培训、人力资源、团队领导等方向。给你的建议：记得把镜头也对准自己，别只当别人的光。"
+  },
+  {
+   "key": "ENFP",
+   "icon": "🔥",
+   "title": "ENFP · 竞选者",
+   "description": "你充满热情与想象力，喜欢新鲜的人和事。适合创意、市场、公共关系、创业等方向。给你的建议：练习把热情聚焦到一件事上，你会惊讶于自己的成果。"
+  },
+  {
+   "key": "ISTJ",
+   "icon": "🧱",
+   "title": "ISTJ · 物流师",
+   "description": "你踏实、可靠、重视规则与细节。适合财务、审计、法务、运营等需要严谨的方向。给你的建议：偶尔跳出流程想一想「为什么」，你会更有掌控感。"
+  },
+  {
+   "key": "ISFJ",
+   "icon": "🛡️",
+   "title": "ISFJ · 守卫者",
+   "description": "你温和、细致、默默守护着身边的人。适合医护、行政、教师、客户服务等方向。给你的建议：你的付出值得被看见，学会主动表达需求。"
+  },
+  {
+   "key": "ESTJ",
+   "icon": "📋",
+   "title": "ESTJ · 总经理",
+   "description": "你务实、高效、天生擅长组织与执行。适合管理、供应链、公共事务、工程管理等方向。给你的建议：留一点弹性给变化，计划会更耐用。"
+  },
+  {
+   "key": "ESFJ",
+   "icon": "🤝",
+   "title": "ESFJ · 执政官",
+   "description": "你热心、周到，把人际关系打理得井井有条。适合公关、活动策划、护理、社区服务等方向。给你的建议：不必让所有人满意，你已足够好。"
+  },
+  {
+   "key": "ISTP",
+   "icon": "🛠️",
+   "title": "ISTP · 鉴赏家",
+   "description": "你冷静、动手能力强，喜欢拆解和解决具体问题。适合工程、技术运维、机械、户外急救等方向。给你的建议：把你的实力展示出来，机会会更多。"
+  },
+  {
+   "key": "ISFP",
+   "icon": "🍃",
+   "title": "ISFP · 探险家",
+   "description": "你敏感、有审美，用行动而非言语表达自己。适合设计、摄影、烹饪、手工艺等方向。给你的建议：给自己定一些小目标，才华需要舞台。"
+  },
+  {
+   "key": "ESTP",
+   "icon": "⚡",
+   "title": "ESTP · 企业家",
+   "description": "你精力充沛、反应快，喜欢行动与冒险。适合销售、创业、体育、危机处理等方向。给你的建议：行动前多想一步，你会赢得更稳。"
+  },
+  {
+   "key": "ESFP",
+   "icon": "🎤",
+   "title": "ESFP · 表演者",
+   "description": "你乐观、爱热闹，天生自带气氛感。适合主持、演艺、旅游、零售等与人打交道的方向。给你的建议：留一些安静的时间给自己，灵感会更多。"
+  }
+ ],
+ "questions": [
+  {
+   "id": 1,
+   "category": "MBTI·外向/内向",
+   "question": "在聚会上，你通常会：",
+   "options": [
+    "主动认识很多新朋友",
+    "和熟悉的一两个人深聊"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 2,
+   "category": "MBTI·外向/内向",
+   "question": "一天的社交活动后，你感觉：",
+   "options": [
+    "意犹未尽，还想找人聊",
+    "有点累，想独处充电"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 3,
+   "category": "MBTI·外向/内向",
+   "question": "遇到问题时，你更倾向于：",
+   "options": [
+    "立刻找人讨论",
+    "自己先想清楚再说"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 4,
+   "category": "MBTI·外向/内向",
+   "question": "周末你更愿意：",
+   "options": [
+    "约朋友出门活动",
+    "宅家做自己的事"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 5,
+   "category": "MBTI·外向/内向",
+   "question": "你的能量更多来自：",
+   "options": [
+    "与外界互动",
+    "安静的内心世界"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 6,
+   "category": "MBTI·外向/内向",
+   "question": "在团队中你常扮演：",
+   "options": [
+    "带动气氛的角色",
+    "安静观察的角色"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 7,
+   "category": "MBTI·外向/内向",
+   "question": "电话响了，你的第一反应是：",
+   "options": [
+    "马上接起来",
+    "希望能用文字沟通"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 8,
+   "category": "MBTI·外向/内向",
+   "question": "旅游时你更喜欢：",
+   "options": [
+    "结伴同行热闹出发",
+    "独自或与至亲同行"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 9,
+   "category": "MBTI·外向/内向",
+   "question": "别人常说你：",
+   "options": [
+    "热情外向",
+    "文静内敛"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 10,
+   "category": "MBTI·外向/内向",
+   "question": "长时间独处后你会：",
+   "options": [
+    "憋坏了，特别想找人说话",
+    "感觉恢复了能量"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 11,
+   "category": "MBTI·外向/内向",
+   "question": "认识新朋友时你：",
+   "options": [
+    "很快打成一片",
+    "需要较长时间熟络"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 12,
+   "category": "MBTI·外向/内向",
+   "question": "你更喜欢的工作方式是：",
+   "options": [
+    "团队协作、频繁交流",
+    "独立完成、少被打扰"
+   ],
+   "optionResults": [
+    "E",
+    "I"
+   ],
+   "explanation": "本题考察 E/I 维度：选A偏向 E，选B偏向 I，没有对错之分。"
+  },
+  {
+   "id": 13,
+   "category": "MBTI·实感/直觉",
+   "question": "你在课堂上更容易记住：",
+   "options": [
+    "具体的例子和事实",
+    "抽象的概念和理论"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 14,
+   "category": "MBTI·实感/直觉",
+   "question": "看小说时你更关注：",
+   "options": [
+    "情节和细节描写",
+    "故事背后的寓意"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 15,
+   "category": "MBTI·实感/直觉",
+   "question": "你更相信：",
+   "options": [
+    "亲身经验和实证",
+    "直觉和灵感"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 16,
+   "category": "MBTI·实感/直觉",
+   "question": "别人评价你更接近：",
+   "options": [
+    "脚踏实地",
+    "天马行空"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 17,
+   "category": "MBTI·实感/直觉",
+   "question": "学新东西你偏好：",
+   "options": [
+    "按步骤一步步来",
+    "先把握整体框架"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 18,
+   "category": "MBTI·实感/直觉",
+   "question": "你更适合的工作是：",
+   "options": [
+    "处理确定、具体的事务",
+    "探索未知、构想方案"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 19,
+   "category": "MBTI·实感/直觉",
+   "question": "回忆往事时你想起的多是：",
+   "options": [
+    "清晰的画面和细节",
+    "当时的感觉和氛围"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 20,
+   "category": "MBTI·实感/直觉",
+   "question": "你更喜欢读：",
+   "options": [
+    "实用指南类内容",
+    "创新思辨类内容"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 21,
+   "category": "MBTI·实感/直觉",
+   "question": "面对新项目你先想：",
+   "options": [
+    "现有资源和步骤",
+    "未来的可能性"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 22,
+   "category": "MBTI·实感/直觉",
+   "question": "你觉得自己更：",
+   "options": [
+    "注重现实",
+    "富于想象"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 23,
+   "category": "MBTI·实感/直觉",
+   "question": "描述一次旅行你会：",
+   "options": [
+    "按时间线讲述经过",
+    "聊印象最深的意义"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 24,
+   "category": "MBTI·实感/直觉",
+   "question": "你更欣赏的人是：",
+   "options": [
+    "把事情做扎实的人",
+    "能提出新想法的人"
+   ],
+   "optionResults": [
+    "S",
+    "N"
+   ],
+   "explanation": "本题考察 S/N 维度：选A偏向 S，选B偏向 N，没有对错之分。"
+  },
+  {
+   "id": 25,
+   "category": "MBTI·思考/情感",
+   "question": "朋友做错了事来倾诉，你先回应：",
+   "options": [
+    "分析问题出在哪",
+    "先安慰他的情绪"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 26,
+   "category": "MBTI·思考/情感",
+   "question": "做决定时你更看重：",
+   "options": [
+    "逻辑与利弊",
+    "感受与价值观"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 27,
+   "category": "MBTI·思考/情感",
+   "question": "看感人电影时你：",
+   "options": [
+    "相对冷静理性",
+    "常常被打动落泪"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 28,
+   "category": "MBTI·思考/情感",
+   "question": "别人批评你的方案，你先想：",
+   "options": [
+    "批评是否有道理",
+    "他说话方式让人不舒服"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 29,
+   "category": "MBTI·思考/情感",
+   "question": "你认为更好的领导是：",
+   "options": [
+    "公正严格就事论事",
+    "体恤下属有人情味"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 30,
+   "category": "MBTI·思考/情感",
+   "question": "争论时你更在意：",
+   "options": [
+    "谁的观点更正确",
+    "关系是否还融洽"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 31,
+   "category": "MBTI·思考/情感",
+   "question": "分配任务时你倾向：",
+   "options": [
+    "按能力和效率分配",
+    "照顾每个人的处境"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 32,
+   "category": "MBTI·思考/情感",
+   "question": "你的决策更多基于：",
+   "options": [
+    "客观标准",
+    "内心感受"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 33,
+   "category": "MBTI·思考/情感",
+   "question": "朋友请你评价他的作品，你会：",
+   "options": [
+    "直率指出问题",
+    "先肯定再委婉建议"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 34,
+   "category": "MBTI·思考/情感",
+   "question": "你更不能忍受：",
+   "options": [
+    "愚蠢的决定",
+    "冷漠的氛围"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 35,
+   "category": "MBTI·思考/情感",
+   "question": "处理纠纷时你习惯：",
+   "options": [
+    "讲道理分对错",
+    "安抚双方情绪"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 36,
+   "category": "MBTI·思考/情感",
+   "question": "你希望自己被形容为：",
+   "options": [
+    "头脑清晰",
+    "温暖善良"
+   ],
+   "optionResults": [
+    "T",
+    "F"
+   ],
+   "explanation": "本题考察 T/F 维度：选A偏向 T，选B偏向 F，没有对错之分。"
+  },
+  {
+   "id": 37,
+   "category": "MBTI·判断/知觉",
+   "question": "旅行前你通常会：",
+   "options": [
+    "做好详细行程表",
+    "说走就走随机应变"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 38,
+   "category": "MBTI·判断/知觉",
+   "question": "你的桌面和房间通常：",
+   "options": [
+    "整洁有序",
+    "比较随性"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 39,
+   "category": "MBTI·判断/知觉",
+   "question": "面对截止日期你：",
+   "options": [
+    "提前完成",
+    "最后冲刺赶工"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 40,
+   "category": "MBTI·判断/知觉",
+   "question": "计划被临时打乱，你会：",
+   "options": [
+    "有点烦躁，想重新规划",
+    "顺其自然，见招拆招"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 41,
+   "category": "MBTI·判断/知觉",
+   "question": "待办清单对你来说：",
+   "options": [
+    "每天都在用",
+    "可有可无"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 42,
+   "category": "MBTI·判断/知觉",
+   "question": "你更喜欢：",
+   "options": [
+    "事情尽早定下来",
+    "保留更多选择空间"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 43,
+   "category": "MBTI·判断/知觉",
+   "question": "做决定时你：",
+   "options": [
+    "收集信息后尽快拍板",
+    "总想再等等看"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 44,
+   "category": "MBTI·判断/知觉",
+   "question": "你的生活更像：",
+   "options": [
+    "有规律的日程表",
+    "随心情的即兴演出"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 45,
+   "category": "MBTI·判断/知觉",
+   "question": "收拾行李时你：",
+   "options": [
+    "列清单逐项核对",
+    "抓起大概够用的就行"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 46,
+   "category": "MBTI·判断/知觉",
+   "question": "对于「说走就走的旅行」你觉得：",
+   "options": [
+    "太没安全感了",
+    "这才是乐趣啊"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 47,
+   "category": "MBTI·判断/知觉",
+   "question": "工作时你更喜欢：",
+   "options": [
+    "明确的流程和标准",
+    "灵活自定的节奏"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  },
+  {
+   "id": 48,
+   "category": "MBTI·判断/知觉",
+   "question": "项目接近尾声你通常会：",
+   "options": [
+    "早已收尾完毕",
+    "还在做最后的收尾"
+   ],
+   "optionResults": [
+    "J",
+    "P"
+   ],
+   "explanation": "本题考察 J/P 维度：选A偏向 J，选B偏向 P，没有对错之分。"
+  }
+ ]
+}
