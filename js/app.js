@@ -159,6 +159,13 @@
   }
 
   // ===== 学习日志 =====
+  // 本地日期字符串（YYYY-MM-DD）。不能用 toISOString()：它按 UTC 取日期，
+  // 北京时间（UTC+8）0~8 点会落到前一天，导致学习日历色块整体错位一天。
+  function localDateStr(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
   function loadStudyLog() {
     const saved = localStorage.getItem(STUDY_LOG_STORAGE);
     if (saved) { try { state.studyLog = JSON.parse(saved); } catch (e) {} }
@@ -167,7 +174,7 @@
     localStorage.setItem(STUDY_LOG_STORAGE, JSON.stringify(state.studyLog));
   }
   function logStudy() {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localDateStr(new Date());
     state.studyLog[today] = (state.studyLog[today] || 0) + 1;
     saveStudyLog();
   }
@@ -2252,7 +2259,7 @@
     const colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
 
     // 月份标签
-    const todayStr = today.toISOString().slice(0, 10);
+    const todayStr = localDateStr(today);
     let monthLabels = '<div class="hm-month-row"><div class="hm-day-label-spacer"></div>';
     let lastMonth = -1;
     const d = new Date(start);
@@ -2277,7 +2284,7 @@
 
     const d2 = new Date(start);
     for (let i = 0; i < weeks * 7; i++) {
-      const dateStr = d2.toISOString().slice(0, 10);
+      const dateStr = localDateStr(d2);
       const count = state.studyLog[dateStr] || 0;
       const isFuture = d2 > today;
       const isToday = dateStr === todayStr;
@@ -2433,7 +2440,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.5.0';
+  const APP_VERSION = '1.5.1';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
