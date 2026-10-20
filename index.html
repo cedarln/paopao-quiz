@@ -132,11 +132,11 @@
           <p class="import-tip">在线题库来自 GitHub 仓库，本地题库支持 JSON 配置文件，可导入英语、日语等任意科目</p>
         </div>
 
-        <div class="section-title" style="margin-top: 24px;">
+        <div class="section-title" style="margin-top: 24px;" id="quiz-settings-title">
           <span class="section-icon">⚙️</span>
           <h2>刷题设置</h2>
         </div>
-        <div class="setting-card">
+        <div class="setting-card" id="quiz-settings-card">
           <div class="setting-row">
             <label class="setting-label">每次刷题数量</label>
             <div class="qty-options" id="qty-options">
@@ -162,6 +162,26 @@
           <button id="exam-start-btn" class="exam-start-btn" disabled>
             <span class="btn-icon">📝</span>
             <span>模拟考试</span>
+          </button>
+        </div>
+
+        <!-- 测评型题库专属按钮（按状态显示） -->
+        <div class="start-actions" id="assessment-actions" style="display:none;">
+          <button id="as-start-btn" class="start-btn">
+            <span class="btn-icon">▶</span>
+            <span>开始测试</span>
+          </button>
+          <button id="as-resume-btn" class="start-btn" style="display:none;">
+            <span class="btn-icon">⏯️</span>
+            <span>继续测试</span>
+          </button>
+          <button id="as-view-btn" class="exam-start-btn" style="display:none;">
+            <span class="btn-icon">📄</span>
+            <span>查看测试结果</span>
+          </button>
+          <button id="as-clear-btn" class="as-clear-btn" style="display:none;">
+            <span class="btn-icon">🧹</span>
+            <span>清除测试结果</span>
           </button>
         </div>
 

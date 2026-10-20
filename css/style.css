@@ -272,6 +272,24 @@ body.custom-bg::before {
   color: var(--text-muted);
 }
 
+/* 测评型题库的「清除测试结果」次要按钮 */
+.as-clear-btn {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.2s ease;
+}
+.as-clear-btn:active { opacity: 0.6; }
+
 /* 每日一言 */
 .daily-quote {
   text-align: center;
