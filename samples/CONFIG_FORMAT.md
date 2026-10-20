@@ -28,8 +28,47 @@
 | `name` | string | **是** | 题库名称，显示在卡片标题上 |
 | `icon` | string | 否 | 图标（emoji），默认 📝 |
 | `description` | string | 否 | 题库描述，显示在卡片副标题 |
-| `category` | string | 否 | 分类标签，如 `language`、`exam` 等 |
+| `category` | string | 否 | 分类标签，如 `language`、`exam`、`assessment` 等 |
 | `questions` | array | **是** | 题目数组 |
+
+## 测评型题库（心理测验，如 MBTI）
+
+在顶层增加 `type: "assessment"` 即启用测评模式：**无对错判定**，每题选择映射到一个结果标签（tag），全部作答后按标签计分得出结果。
+
+### 题库级附加字段
+
+```json
+{
+  "type": "assessment",
+  "resultMode": "combine 或 top",
+  "dimensions": [["E","I"], ["N","S"]],
+  "results": [
+    { "key": "EN", "icon": "🌟", "title": "EN · 外向直觉型", "description": "结果描述…" }
+  ]
+}
+```
+
+- `resultMode`：
+  - `combine`：每个维度组内取得票最高的标签，按组顺序拼接成结果 key（适合 MBTI，如 `E`+`N` → `EN`）
+  - `top`：全部标签中得票最高者为结果 key（适合职业兴趣、性格色彩）
+- `dimensions`：标签分组数组，combine 模式下每组的最高票标签按顺序拼接
+- `results[].key` 需与拼接/最高的标签组合对应
+
+### 测评题目格式（无 answer，新增 optionResults）
+
+```json
+{
+  "id": 1,
+  "category": "MBTI·外向/内向",
+  "question": "在聚会上，你通常会：",
+  "options": ["主动认识很多新朋友", "和熟悉的一两个人深聊"],
+  "optionResults": ["E", "I"],
+  "explanation": "本题考察 E/I 维度…"
+}
+```
+
+`optionResults` 与 `options` 等长，标记每个选项计入哪个结果标签。
+
 
 ## 题目结构
 

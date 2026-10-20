@@ -416,6 +416,10 @@
       questions = shuffleArray(questions);
     }
 
+    // 测评型题库（MBTI 等）：无对错计分，禁用考试倒计时
+    state.isAssessment = subject.type === 'assessment';
+    if (state.isAssessment) state.isExam = false;
+
     // 取指定数量的题目
     const qty = Math.min(state.qty, questions.length);
     state.questions = questions.slice(0, qty);
@@ -584,8 +588,8 @@
       const item = document.createElement('div');
       item.className = 'option-item';
       item.dataset.index = i;
-      // 考试模式：高亮已选选项（不显示对错）
-      if (state.isExam && currentAnswer && currentAnswer.selected === i) {
+      // 考试模式/测评模式：高亮已选选项（不显示对错）
+      if ((state.isExam || state.isAssessment) && currentAnswer && currentAnswer.selected === i) {
         item.classList.add('selected');
       }
       item.innerHTML = `
@@ -607,7 +611,11 @@
     $('prev-btn').disabled = state.currentIndex === 0;
     const nextBtn = $('next-btn');
 
-    if (state.isExam) {
+    if (state.isAssessment) {
+      // 测评模式：选过即可翻页，最后一题显示"查看结果"
+      nextBtn.disabled = !currentAnswer;
+      nextBtn.textContent = state.currentIndex === total - 1 ? '查看结果' : '下一题';
+    } else if (state.isExam) {
       // 考试模式：始终可翻页，最后一题显示"交卷"
       nextBtn.disabled = false;
       nextBtn.textContent = state.currentIndex === total - 1 ? '交卷' : '下一题';
@@ -629,6 +637,24 @@
   // ===== 选择选项 =====
   function selectOption(index) {
     const q = state.questions[state.currentIndex];
+
+    // 测评模式：无对错，记录所选标签，不高亮红绿、不计分不触发连击
+    if (state.isAssessment) {
+      state.answers[state.currentIndex] = {
+        questionId: q.id,
+        selected: index,
+        tag: (q.optionResults || [])[index] || ''
+      };
+      document.querySelectorAll('.option-item').forEach((item, i) => {
+        item.classList.toggle('selected', i === index);
+      });
+      const nextBtn = $('next-btn');
+      nextBtn.disabled = false;
+      if (state.currentIndex === state.questions.length - 1) {
+        nextBtn.textContent = '查看结果';
+      }
+      return;
+    }
 
     if (state.isExam) {
       // 考试模式：允许改选，不即时判分
@@ -772,6 +798,15 @@
 
   // ===== 显示结果 =====
   function showResult() {
+    if (state.isAssessment) {
+      showAssessmentResult();
+      return;
+    }
+    // 恢复测评模式隐藏的分数区（同一会话可能先做过测评）
+    const scoreBox = $('result-score-box');
+    const detailBox = $('result-detail-box');
+    if (scoreBox) scoreBox.style.display = '';
+    if (detailBox) detailBox.style.display = '';
     const total = state.questions.length;
     const correctCount = state.answers.filter(a => a && a.isRight).length;
     const wrongCount = total - correctCount;
@@ -810,6 +845,52 @@
     if (!state.reviewMode) {
       collectWrongQuestions();
     }
+
+    showPage('result');
+  }
+
+  // ===== 测评型题库的结果计算与展示（MBTI / 职业方向等，无对错） =====
+  function showAssessmentResult() {
+    const subject = window.QUIZ_DATA[state.selectedSubject] || {};
+    const results = subject.results || [];
+    const dimensions = subject.dimensions || [];
+    const mode = subject.resultMode || 'combine';
+
+    // 统计每个标签的票数
+    const tally = {};
+    let answeredCount = 0;
+    state.answers.forEach(a => {
+      if (a && a.tag) {
+        tally[a.tag] = (tally[a.tag] || 0) + 1;
+        answeredCount++;
+      }
+    });
+
+    // 依模式得出结果 key：
+    // combine = 每个维度组内取得票最高的标签，按组顺序拼接（如 MBTI 的 "INTJ"）
+    // top     = 全部标签中得票最高者（如职业兴趣、性格色彩）
+    let key = '';
+    const argmax = (tags) => tags.reduce((best, t) => ((tally[t] || 0) > (tally[best] || 0) ? t : best), tags[0]);
+    if (mode === 'top' && dimensions.length) {
+      key = argmax(dimensions[0]);
+    } else {
+      key = dimensions.map(group => argmax(group)).join('');
+    }
+
+    const hit = results.find(r => r.key === key) || results.find(r => r.key.startsWith(key)) ||
+                results.find(r => key.startsWith(r.key)) || results[0] || { key, title: key, icon: '🎯', description: '' };
+
+    // 复用结果页：隐藏分数/正确率与答题回顾，展示测评结论
+    const scoreBox = $('result-score-box');
+    const detailBox = $('result-detail-box');
+    if (scoreBox) scoreBox.style.display = 'none';
+    if (detailBox) detailBox.style.display = 'none';
+    $('review-section').style.display = 'none';
+    $('result-icon').textContent = hit.icon || '🎯';
+    $('result-title').textContent = hit.title || hit.key;
+    const answeredCount2 = state.answers.filter(a => a && a.tag).length;
+    $('result-message').textContent =
+      `已作答 ${answeredCount2}/${state.questions.length} 题 · 结果类型：${hit.key}\n\n${hit.description || ''}`;
 
     showPage('result');
   }
@@ -1005,6 +1086,28 @@
     if (data.questions.length === 0) {
       return { valid: false, error: '题库为空，至少需要一道题' };
     }
+    // 测评型题库：无对错，按选项映射的标签计分出结果
+    if (data.type === 'assessment') {
+      if (!Array.isArray(data.results) || data.results.length === 0) {
+        return { valid: false, error: '测评题库缺少 results（结果列表）' };
+      }
+      for (const r of data.results) {
+        if (!r.key || !r.title) {
+          return { valid: false, error: 'results 中每项需要 key 和 title 字段' };
+        }
+      }
+      for (let i = 0; i < data.questions.length; i++) {
+        const q = data.questions[i];
+        if (!q.question || !Array.isArray(q.options) || q.options.length < 2) {
+          return { valid: false, error: `第 ${i + 1} 题格式错误：缺少题干或选项不足` };
+        }
+        if (!Array.isArray(q.optionResults) || q.optionResults.length !== q.options.length ||
+            q.optionResults.some(t => !t || typeof t !== 'string')) {
+          return { valid: false, error: `第 ${i + 1} 题缺少 optionResults（每个选项对应的结果标签，数量需与选项一致）` };
+        }
+      }
+      return { valid: true };
+    }
     // 校验每道题
     for (let i = 0; i < data.questions.length; i++) {
       const q = data.questions[i];
@@ -1073,6 +1176,13 @@
       category: data.category || 'custom',
       questions: questions
     };
+    // 测评型题库：透传计分所需字段
+    if (data.type === 'assessment') {
+      window.QUIZ_DATA[data.key].type = 'assessment';
+      window.QUIZ_DATA[data.key].resultMode = data.resultMode || 'combine';
+      window.QUIZ_DATA[data.key].results = data.results || [];
+      window.QUIZ_DATA[data.key].dimensions = data.dimensions || [];
+    }
     state.importedKeys[data.key] = true;
   }
 
@@ -2128,7 +2238,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.3.11';
+  const APP_VERSION = '1.4.0';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
