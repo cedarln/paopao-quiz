@@ -368,12 +368,6 @@
     checkStartButton();
   }
 
-  function checkStartButton() {
-    const has = !!state.selectedSubject;
-    $('start-btn').disabled = !has;
-    $('exam-start-btn').disabled = !has;
-  }
-
   // ===== 题量和模式选择 =====
   function initSettings() {
     $('qty-options').addEventListener('click', (e) => {
@@ -393,6 +387,114 @@
     });
 
     $('start-btn').addEventListener('click', startQuiz);
+
+    // 测评型题库专属按钮
+    $('as-start-btn').addEventListener('click', startQuiz);
+    $('as-resume-btn').addEventListener('click', () => resumeAssessment(state.selectedSubject));
+    $('as-view-btn').addEventListener('click', () => viewAssessmentResult(state.selectedSubject));
+    $('as-clear-btn').addEventListener('click', () => {
+      if (!state.selectedSubject) return;
+      if (!window.confirm('确定清除该测试的进度与历史结果吗？')) return;
+      clearAssessmentDraft(state.selectedSubject);
+      clearAssessmentResult(state.selectedSubject);
+      checkStartButton();
+      showToast('已清除测试进度与结果');
+    });
+  }
+
+  // ===== 测评型题库：进度缓存 / 历史结果 / 专属按钮 =====
+  const ASSESSMENT_DRAFT_PREFIX = 'assessment-draft__';
+  const ASSESSMENT_RESULT_PREFIX = 'assessment-result__';
+
+  function getAssessmentDraft(key) {
+    try { return JSON.parse(localStorage.getItem(ASSESSMENT_DRAFT_PREFIX + key)); } catch (e) { return null; }
+  }
+  function saveAssessmentDraft(key, data) {
+    try { localStorage.setItem(ASSESSMENT_DRAFT_PREFIX + key, JSON.stringify(data)); } catch (e) {}
+  }
+  function clearAssessmentDraft(key) { localStorage.removeItem(ASSESSMENT_DRAFT_PREFIX + key); }
+  function getAssessmentResult(key) {
+    try { return JSON.parse(localStorage.getItem(ASSESSMENT_RESULT_PREFIX + key)); } catch (e) { return null; }
+  }
+  function saveAssessmentResult(key, data) {
+    try { localStorage.setItem(ASSESSMENT_RESULT_PREFIX + key, JSON.stringify(data)); } catch (e) {}
+  }
+  function clearAssessmentResult(key) { localStorage.removeItem(ASSESSMENT_RESULT_PREFIX + key); }
+
+  // 校验缓存的题目快照与当前题库一致（题库被覆盖/更新后旧缓存作废）
+  function questionsMatchSnapshot(subject, snapshot) {
+    if (!snapshot || !Array.isArray(snapshot) || snapshot.length !== subject.questions.length) return false;
+    return snapshot.every((q, i) => q && q.question === subject.questions[i].question);
+  }
+
+  // 首页：按选中题库类型切换 刷题设置/测评按钮，并刷新测评按钮状态
+  function checkStartButton() {
+    const key = state.selectedSubject;
+    const has = !!key;
+    const isAss = has && window.QUIZ_DATA[key] && window.QUIZ_DATA[key].type === 'assessment';
+    const settingsCard = $('quiz-settings-card');
+    const settingsTitle = $('quiz-settings-title');
+    const assActions = $('assessment-actions');
+    if (settingsCard) settingsCard.style.display = isAss ? 'none' : '';
+    if (settingsTitle) settingsTitle.style.display = isAss ? 'none' : '';
+    if (assActions) assActions.style.display = isAss ? 'flex' : 'none';
+    $('start-btn').disabled = !has || isAss;
+    $('exam-start-btn').disabled = !has || isAss;
+    if (!isAss || !key) return;
+
+    // 测评按钮状态机：
+    //   有未完成进度 → 继续测试 + 清除
+    //   无进度但有历史结果 → 开始测试 + 查看结果 + 清除
+    //   都没有 → 开始测试
+    const draft = getAssessmentDraft(key);
+    const last = getAssessmentResult(key);
+    const hasDraft = !!(draft && Array.isArray(draft.answers) && draft.answers.some(a => a && a.tag));
+    $('as-start-btn').style.display = hasDraft ? 'none' : '';
+    $('as-resume-btn').style.display = hasDraft ? '' : 'none';
+    $('as-view-btn').style.display = last ? '' : 'none';
+    $('as-clear-btn').style.display = (hasDraft || last) ? '' : 'none';
+    const resumeText = $('as-resume-btn').querySelector('span:last-child');
+    if (resumeText) {
+      const done = draft.answers.filter(a => a && a.tag).length;
+      resumeText.textContent = `继续测试（${done}/${draft.questions ? draft.questions.length : '?'}）`;
+    }
+  }
+
+  function resumeAssessment(key) {
+    const draft = getAssessmentDraft(key);
+    const subject = window.QUIZ_DATA[key];
+    if (!draft || !subject || !questionsMatchSnapshot(subject, draft.questions)) {
+      clearAssessmentDraft(key);
+      checkStartButton();
+      showToast('缓存的测试进度已失效，请重新开始');
+      return;
+    }
+    state.selectedSubject = key;
+    state.activeCategory = null;
+    state.isAssessment = true;
+    state.isExam = false;
+    state.questions = draft.questions;
+    state.answers = draft.answers;
+    state.currentIndex = Math.min(draft.currentIndex || 0, draft.questions.length - 1);
+    showPage('quiz');
+    renderQuestion();
+  }
+
+  function viewAssessmentResult(key) {
+    const saved = getAssessmentResult(key);
+    if (!saved) { showToast('暂无历史测试结果'); return; }
+    const scoreBox = $('result-score-box');
+    const detailBox = $('result-detail-box');
+    if (scoreBox) scoreBox.style.display = 'none';
+    if (detailBox) detailBox.style.display = 'none';
+    $('review-section').style.display = 'none';
+    $('result-icon').textContent = saved.icon || '🎯';
+    $('result-title').textContent = saved.title || saved.key;
+    const date = new Date(saved.finishedAt || Date.now());
+    $('result-message').textContent =
+      `测试完成于 ${date.toLocaleDateString()} ${date.toLocaleTimeString().slice(0, 5)} · 作答 ${saved.answeredCount}/${saved.total} 题\n\n${saved.description || ''}`;
+    $('retry-btn').textContent = '重新测试';
+    showPage('result');
   }
 
   // ===== 开始刷题 =====
@@ -411,14 +513,28 @@
       }
     }
 
+    // 测评型题库（MBTI 等）：全量题目按原顺序作答，无数量/模式配置
+    state.isAssessment = subject.type === 'assessment';
+    if (state.isAssessment) {
+      state.isExam = false;
+      questions = subject.questions.slice();
+      // 开始新测试：重置进度缓存
+      clearAssessmentDraft(state.selectedSubject);
+      saveAssessmentDraft(state.selectedSubject, { answers: [], currentIndex: 0, questions: questions });
+      state.qty = questions.length;
+      state.questions = questions;
+      state.currentIndex = 0;
+      state.answers = [];
+      state.combo = 0;
+      showPage('quiz');
+      renderQuestion();
+      return;
+    }
+
     // 根据模式选择题目
     if (state.mode === 'random' || state.isExam) {
       questions = shuffleArray(questions);
     }
-
-    // 测评型题库（MBTI 等）：无对错计分，禁用考试倒计时
-    state.isAssessment = subject.type === 'assessment';
-    if (state.isAssessment) state.isExam = false;
 
     // 取指定数量的题目
     const qty = Math.min(state.qty, questions.length);
@@ -640,14 +756,31 @@
 
     // 测评模式：无对错，记录所选标签，不高亮红绿、不计分不触发连击
     if (state.isAssessment) {
+      const isNewAnswer = !state.answers[state.currentIndex];
       state.answers[state.currentIndex] = {
         questionId: q.id,
         selected: index,
         tag: (q.optionResults || [])[index] || ''
       };
+      // 实时缓存进度（返回键退出后可继续测试）
+      saveAssessmentDraft(state.selectedSubject, {
+        answers: state.answers, currentIndex: state.currentIndex, questions: state.questions
+      });
       document.querySelectorAll('.option-item').forEach((item, i) => {
         item.classList.toggle('selected', i === index);
       });
+      // 首次作答：短暂高亮后自动进入下一题（回看修改答案时不自动跳）
+      if (isNewAnswer) {
+        setTimeout(() => {
+          if (currentPage !== 'quiz' || !state.isAssessment) return;
+          if (state.currentIndex < state.questions.length - 1) {
+            goToQuestion(state.currentIndex + 1);
+          } else {
+            showResult();
+          }
+        }, 400);
+        return;
+      }
       const nextBtn = $('next-btn');
       nextBtn.disabled = false;
       if (state.currentIndex === state.questions.length - 1) {
@@ -807,6 +940,7 @@
     const detailBox = $('result-detail-box');
     if (scoreBox) scoreBox.style.display = '';
     if (detailBox) detailBox.style.display = '';
+    $('retry-btn').textContent = '再刷一组';
     const total = state.questions.length;
     const correctCount = state.answers.filter(a => a && a.isRight).length;
     const wrongCount = total - correctCount;
@@ -880,6 +1014,16 @@
     const hit = results.find(r => r.key === key) || results.find(r => r.key.startsWith(key)) ||
                 results.find(r => key.startsWith(r.key)) || results[0] || { key, title: key, icon: '🎯', description: '' };
 
+    // 保存历史结果（供首页「查看测试结果」），并清掉进行中的进度缓存
+    const answeredCount2 = state.answers.filter(a => a && a.tag).length;
+    saveAssessmentResult(state.selectedSubject, {
+      key: hit.key, icon: hit.icon || '🎯', title: hit.title || hit.key,
+      description: hit.description || '',
+      answeredCount: answeredCount2, total: state.questions.length,
+      finishedAt: Date.now()
+    });
+    clearAssessmentDraft(state.selectedSubject);
+
     // 复用结果页：隐藏分数/正确率与答题回顾，展示测评结论
     const scoreBox = $('result-score-box');
     const detailBox = $('result-detail-box');
@@ -888,9 +1032,9 @@
     $('review-section').style.display = 'none';
     $('result-icon').textContent = hit.icon || '🎯';
     $('result-title').textContent = hit.title || hit.key;
-    const answeredCount2 = state.answers.filter(a => a && a.tag).length;
     $('result-message').textContent =
       `已作答 ${answeredCount2}/${state.questions.length} 题 · 结果类型：${hit.key}\n\n${hit.description || ''}`;
+    $('retry-btn').textContent = '重新测试';
 
     showPage('result');
   }
@@ -2238,7 +2382,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.4.0';
+  const APP_VERSION = '1.4.1';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2524,8 +2668,19 @@
     cap.addListener('App', 'backButton', (data) => {
       // 1. 有弹窗（含更新/清理/成就等）或主题背景面板打开 → 先关掉
       if (closeTopOverlay()) return;
-      // 2. 答题页：确认后回首页，避免误触丢进度
+      // 2. 答题页
       if (currentPage === 'quiz') {
+        // 测评：自动缓存进度回首页（可「继续测试」恢复），无需确认
+        if (state.isAssessment) {
+          saveAssessmentDraft(state.selectedSubject, {
+            answers: state.answers, currentIndex: state.currentIndex, questions: state.questions
+          });
+          cleanupQuizSession();
+          showPage('home');
+          checkStartButton();
+          showToast('已保存测试进度，可随时继续');
+          return;
+        }
         if (window.confirm('确定要退出本次刷题吗？')) showPage('home');
         return;
       }
