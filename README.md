@@ -4,11 +4,23 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.2.0-orange)
+![Version](https://img.shields.io/badge/version-1.6.1-orange)
 
 ---
 
 ## 📦 Releases
+
+### v1.6.1（2026-10-22）
+
+- 🐛 修复导入听力题库后刷题界面不显示播放按钮的问题：收藏夹、错题本与错题再练现在会完整保留 `audio` 等听力字段；同时兼容 `audioUrl` / `mp3` / `audioText` 等常见字段名
+- 🐛 修复长题面（读解文章、听力脚本）换行被吞掉的问题
+- ✨ 模拟考试支持题库级**套卷预设**：自动预填题量、时长与三节分区说明，套卷考试保持真实卷面顺序（`exam.preserveOrder`）
+- 📚 新增 **JLPT N5 模拟卷 第1回**：文字・語彙 35 + 文法・読解 32 + 聴解 30，共 97 题 / 90 分钟，30 道听力全部带日语朗读脚本
+
+### v1.6.0（2026-10-21）
+
+- ✨ 新增日语听力播放：支持 Web Speech API 日语 TTS 与 `audioUrl` 音频文件，播放按钮带状态提示与无 TTS 引擎提示
+- 📚 N5 全项题库扩充至 250 题并补齐听力四大题型；新增日语 N3 核心词汇 200 题
 
 ### v1.3.6（2026-10-19）
 
@@ -234,6 +246,7 @@ python3 -m http.server 8090
 | `icon` | string | ❌ | emoji 图标，默认 📝 |
 | `description` | string | ❌ | 题库描述 |
 | `category` | string | ❌ | 分类标签 |
+| `exam` | object | ❌ | 套卷考试预设：`count` 题量、`minutes` 时长、`preserveOrder` 保持卷面顺序、`sections` 分区说明；点「模拟考试」时自动预填 |
 
 ### 题目字段
 
@@ -244,6 +257,10 @@ python3 -m http.server 8090
 | `answer` | number | ✅ | 正确答案索引（从 0 开始） |
 | `explanation` | string | ❌ | 答案解析 |
 | `category` | string | ❌ | 题目分类（用于分类筛选） |
+| `audio` | string | ❌ | 听力朗读文本（App 用设备日语 TTS 播放） |
+| `audioUrl` | string | ❌ | 音频文件地址（mp3 / m4a / wav / ogg），优先于 TTS |
+
+> 听力题示例：`"audio": "女：あした 何を しますか。男：…（完整对话与问题）"`，播放按钮会自动出现在题干下方。
 
 > 💡 你可以把 doc / pdf / url 链接发给我，我会帮你制作成对应的题库配置文件。
 

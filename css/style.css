@@ -782,6 +782,7 @@ body.custom-bg::before {
   color: var(--text-primary);
   line-height: 1.6;
   margin-bottom: 20px;
+  white-space: pre-line;
 }
 
 .audio-play-btn {
@@ -823,6 +824,18 @@ body.custom-bg::before {
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.7; }
+}
+
+.audio-missing-hint {
+  display: none;
+  margin: -8px 0 14px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.1);
+  border-left: 3px solid var(--warning);
+  border-radius: 6px;
+  line-height: 1.5;
 }
 
 .options-list {
@@ -1700,6 +1713,28 @@ body.custom-bg::before {
 
 .exam-config-group {
   margin: 16px 0;
+}
+
+.exam-sections {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+}
+
+.exam-section-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 3px 0;
+}
+
+.exam-section-row span:last-child {
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .exam-config-label {
