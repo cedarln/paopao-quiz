@@ -784,6 +784,47 @@ body.custom-bg::before {
   margin-bottom: 20px;
 }
 
+.audio-play-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+  color: white;
+  border: none;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.audio-play-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+}
+
+.audio-play-btn:active {
+  transform: scale(0.95);
+}
+
+.audio-play-btn.playing {
+  background: linear-gradient(135deg, var(--success), #34d399);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.audio-icon {
+  font-size: 16px;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
 .options-list {
   display: flex;
   flex-direction: column;
