@@ -221,9 +221,34 @@
     return out;
   }
 
+  // 已知听力题库的音频随 App 内置。Android WebView 不支持 Web Speech API，
+  // 不能再依赖设备 TTS；按题库 key + 题目 id 直接映射到本地音频文件。
+  const BUNDLED_AUDIO_RANGES = {
+    'jlpt-n5-mock-1': [68, 97],
+    'jlpt-n5-full': [215, 250]
+  };
+
+  function getBundledAudioUrl(q) {
+    const id = Number(q && q.id);
+    if (!Number.isInteger(id)) return '';
+    const keys = [];
+    if (q && typeof q.subjectKey === 'string') keys.push(q.subjectKey);
+    if (state.selectedSubject && !keys.includes(state.selectedSubject)) {
+      keys.push(state.selectedSubject);
+    }
+    for (const key of keys) {
+      const range = BUNDLED_AUDIO_RANGES[key];
+      if (range && id >= range[0] && id <= range[1]) {
+        return `audio/${key}/${id}.m4a`;
+      }
+    }
+    return '';
+  }
+
   // 统一识别题目音频，兼容多种常见字段名：
-  //   audio / audioText / listening / speech / tts  → 走 TTS 朗读
   //   audioUrl / audio_url / mp3 / sound            → 直接播放音频文件
+  //   已知内置题库                                  → 播放随 App 打包的音频
+  //   audio / audioText / listening / speech / tts  → 走 TTS 朗读（兜底）
   //   audio 也可以是 { url } 或 { text } 对象
   function getQuestionAudio(q) {
     if (!q) return null;
@@ -238,6 +263,8 @@
       || (typeof raw === 'string' && /^(https?:)?\/\//.test(raw) ? raw : '')
       || (typeof raw === 'string' && /\.(mp3|m4a|wav|ogg)(\?|$)/i.test(raw) ? raw : '');
     if (url && typeof url === 'string') return { type: 'url', src: url };
+    const bundled = getBundledAudioUrl(q);
+    if (bundled) return { type: 'url', src: bundled };
     const text = (typeof raw === 'string' && !url ? raw : '')
       || q.audioText || q.audio_text || q.audio_script
       || q.listening || q.speech || q.tts;
@@ -305,7 +332,7 @@
 
   function playAudio(text, btn) {
     if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
-      showToast('此设备不支持语音播放（Web Speech API 不可用）');
+      showToast('当前设备不支持语音朗读，且该题未附带音频文件');
       return;
     }
     const synth = window.speechSynthesis;
@@ -2429,6 +2456,7 @@
     // 构造临时题库
     const questions = keys.map(k => state.wrongBook[k]).map((item, i) => ({
       id: item.id,
+      subjectKey: item.subjectKey,
       question: item.question,
       options: item.options,
       answer: item.answer,
@@ -3134,7 +3162,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.6.2';
+  const APP_VERSION = '1.6.3';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';

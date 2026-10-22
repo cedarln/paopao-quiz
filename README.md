@@ -4,11 +4,17 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.6.2-orange)
+![Version](https://img.shields.io/badge/version-1.6.3-orange)
 
 ---
 
 ## 📦 Releases
+
+### v1.6.3（2026-10-22）
+
+- 🐛 修复 Android 手机无法播放听力的问题：Android WebView 不支持 Web Speech API，改为播放随 App 内置的真实音频，不再依赖设备日语 TTS
+- ✨ **JLPT N5 模拟卷第1回** 30 道听力、**N5 全项题库** 36 道听力全部内嵌 m4a 音频，随 APK 打包，可离线播放
+- ✨ 已导入的题库**无需重新导入**：按题库 key + 题号自动匹配内置音频；收藏夹、错题本和回顾页同样可播放
 
 ### v1.6.2（2026-10-22）
 
@@ -267,10 +273,12 @@ python3 -m http.server 8090
 | `answer` | number | ✅ | 正确答案索引（从 0 开始） |
 | `explanation` | string | ❌ | 答案解析 |
 | `category` | string | ❌ | 题目分类（用于分类筛选） |
-| `audio` | string | ❌ | 听力朗读文本（App 用设备日语 TTS 播放） |
-| `audioUrl` | string | ❌ | 音频文件地址（mp3 / m4a / wav / ogg），优先于 TTS |
+| `audio` | string | ❌ | 听力朗读文本（系统 TTS 兜底；N5 内置题库已改为内置音频） |
+| `audioUrl` | string | ❌ | 音频文件地址（mp3 / m4a / wav / ogg），支持相对路径如 `audio/xxx/1.m4a`，优先于 TTS |
 
 > 听力题示例：`"audio": "女：あした 何を しますか。男：…（完整对话与问题）"`，播放按钮会自动出现在题干下方。
+>
+> 💡 从 v1.6.3 起，N5 模拟卷第1回与 N5 全项题库的听力已内置 m4a 音频，随 App 打包，可离线播放。
 
 > 💡 你可以把 doc / pdf / url 链接发给我，我会帮你制作成对应的题库配置文件。
 
