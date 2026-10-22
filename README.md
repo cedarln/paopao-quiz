@@ -4,11 +4,21 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.6.1-orange)
+![Version](https://img.shields.io/badge/version-1.6.2-orange)
 
 ---
 
 ## 📦 Releases
+
+### v1.6.2（2026-10-22）
+
+- ✨ 新增**套卷专属模式**：识别带 `exam.preserveOrder` / `exam.sections` 的模拟卷后，首页不再显示「每轮题量 / 刷题模式」，也不用再自定义考试题量与时长
+  - 「开始套卷考试」一键按卷面预设开考：整卷保序，按 `sections` 分节独立计时，本节结束后锁定、不能回看
+  - 新增分节进度条、本节倒计时与分节切换提示；听力、读解不再被随机拆散
+  - 交卷后统一判分，并给出各节答对情况；「套卷练习」可按完整卷面顺序作答并即时查看解析
+  - 答题回顾中的听力题新增「播放听力」按钮，交卷后仍可重听
+- 🐛 修复 Android 返回键在考试页直接回首页、未按交卷处理的问题
+- 🐛 修复模拟考试/套卷修改题量后，首页题量选中态与实际开考数量不一致的问题
 
 ### v1.6.1（2026-10-22）
 
@@ -246,7 +256,7 @@ python3 -m http.server 8090
 | `icon` | string | ❌ | emoji 图标，默认 📝 |
 | `description` | string | ❌ | 题库描述 |
 | `category` | string | ❌ | 分类标签 |
-| `exam` | object | ❌ | 套卷考试预设：`count` 题量、`minutes` 时长、`preserveOrder` 保持卷面顺序、`sections` 分区说明；点「模拟考试」时自动预填 |
+| `exam` | object | ❌ | 套卷预设：`count` 题量、`minutes` 总时长、`preserveOrder` 保持卷面顺序、`sections` 分节（`name` / `count` / `minutes`）与 `description`。带 `preserveOrder` 或 `sections` 的题库会自动启用**套卷模式**，一键整卷开考，按节独立计时 |
 
 ### 题目字段
 
