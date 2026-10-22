@@ -4,11 +4,21 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.7.0-orange)
+![Version](https://img.shields.io/badge/version-1.7.1-orange)
 
 ---
 
 ## 📦 Releases
+
+### v1.7.1（2026-10-22）
+
+- 🧠 **MBTI 16型人格测试题库扩充**：从48题增至72题，每个维度18题；为16种人格类型新增丰富分析字段（特质、优势、盲点、工作风格、职业建议、人际关系、成长方向、压力应对）
+- 📚 **教资三科目官方样题套卷上线**：
+  - 思想政治学科知识与教学能力 模拟卷第1回：35题（30单选+2简答+2材料分析+1教学设计），120分钟
+  - 综合素质（中学）模拟卷第1回：33题（29单选+3材料分析+1写作），120分钟
+  - 教育知识与能力（中学）模拟卷第1回：31题（21单选+4辨析+4简答+2材料分析），120分钟
+- ✨ 套卷考试支持分节独立计时、保序作答、交卷后统一判分
+- 🐛 修复Android返回键在考试页直接回首页的问题
 
 ### v1.7.0（2026-10-22）
 
