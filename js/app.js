@@ -192,13 +192,51 @@
     if (state.favorites[key]) {
       delete state.favorites[key];
     } else {
-      state.favorites[key] = { subjectKey: state.selectedSubject, id: q.id, question: q.question, options: q.options, answer: q.answer, explanation: q.explanation, category: q.category };
+      state.favorites[key] = { subjectKey: state.selectedSubject, id: q.id, question: q.question, options: q.options, answer: q.answer, explanation: q.explanation, category: q.category, ...pickExtFields(q) };
     }
     saveFavorites();
     return !state.favorites[key] ? false : true;
   }
   function isFavorite(q) {
     return !!state.favorites[`${state.selectedSubject}__${q.id}`];
+  }
+
+  // 收藏/错题本需要额外保留的题目字段（否则听力、测评等字段会丢）
+  function pickExtFields(q) {
+    const out = {};
+    if (!q) return out;
+    [
+      'audio', 'audioText', 'audio_text', 'audioUrl', 'audio_url',
+      'audio_script', 'mp3', 'sound', 'listening', 'speech', 'tts',
+      'optionResults'
+    ].forEach(key => {
+      if (q[key] !== undefined && q[key] !== null && q[key] !== '') out[key] = q[key];
+    });
+    return out;
+  }
+
+  // 统一识别题目音频，兼容多种常见字段名：
+  //   audio / audioText / listening / speech / tts  → 走 TTS 朗读
+  //   audioUrl / audio_url / mp3 / sound            → 直接播放音频文件
+  //   audio 也可以是 { url } 或 { text } 对象
+  function getQuestionAudio(q) {
+    if (!q) return null;
+    const raw = q.audio;
+    if (raw && typeof raw === 'object') {
+      const u = raw.url || raw.src;
+      if (u && typeof u === 'string') return { type: 'url', src: u };
+      const t = raw.text || raw.tts || raw.script;
+      if (t && typeof t === 'string') return { type: 'tts', src: t };
+    }
+    const url = q.audioUrl || q.audio_url || q.mp3 || q.sound
+      || (typeof raw === 'string' && /^(https?:)?\/\//.test(raw) ? raw : '')
+      || (typeof raw === 'string' && /\.(mp3|m4a|wav|ogg)(\?|$)/i.test(raw) ? raw : '');
+    if (url && typeof url === 'string') return { type: 'url', src: url };
+    const text = (typeof raw === 'string' && !url ? raw : '')
+      || q.audioText || q.audio_text || q.audio_script
+      || q.listening || q.speech || q.tts;
+    if (text && typeof text === 'string') return { type: 'tts', src: text };
+    return null;
   }
 
   // ===== 音效系统（Web Audio API，无外部文件）=====
@@ -308,6 +346,33 @@
         showToast('语音引擎异常：' + (err.message || err));
       }
     }, 60);
+  }
+
+  // 播放音频文件（mp3/m4a 等 URL），供导入的真人录音题库使用
+  let currentAudioEl = null;
+  function playAudioUrl(src, btn) {
+    if (currentAudioEl) {
+      try { currentAudioEl.pause(); } catch (e) {}
+      currentAudioEl = null;
+      setAudioBtnState(btn, false);
+      return;
+    }
+    setAudioBtnState(btn, true, '加载中…');
+    const audio = new Audio(src);
+    audio.preload = 'auto';
+    currentAudioEl = audio;
+    audio.onplay = () => setAudioBtnState(btn, true, '播放中…');
+    audio.onended = () => { currentAudioEl = null; setAudioBtnState(btn, false); };
+    audio.onerror = () => {
+      currentAudioEl = null;
+      setAudioBtnState(btn, false);
+      showToast('音频加载失败，请检查网络或文件地址');
+    };
+    audio.play().catch(err => {
+      currentAudioEl = null;
+      setAudioBtnState(btn, false);
+      showToast('播放失败：' + (err.message || err));
+    });
   }
 
   // ===== 每日一言 =====
@@ -653,8 +718,10 @@
       return;
     }
 
-    // 根据模式选择题目
-    if (state.mode === 'random' || state.isExam) {
+    // 根据模式选择题目；套卷（exam.preserveOrder）在考试模式下保持真实卷面顺序
+    const examPreset = subject.exam || {};
+    const shouldShuffle = state.isExam ? !examPreset.preserveOrder : state.mode === 'random';
+    if (shouldShuffle) {
       questions = shuffleArray(questions);
     }
 
@@ -679,6 +746,45 @@
     if (!state.selectedSubject) {
       showToast('请先选择一个科目');
       return;
+    }
+    const subject = window.QUIZ_DATA[state.selectedSubject] || {};
+    const preset = subject.exam && typeof subject.exam === 'object' ? subject.exam : {};
+    const total = Array.isArray(subject.questions) ? subject.questions.length : 0;
+
+    // 套卷元数据：预填题量、时长与分区说明；普通题库沿用默认值
+    const countInput = $('exam-count');
+    if (countInput) {
+      countInput.value = preset.count || Math.min(total || 10, 200);
+      if (total) countInput.max = Math.max(total, 1);
+    }
+    const timeSelect = $('exam-time');
+    if (timeSelect) {
+      const minutes = preset.minutes || 10;
+      if (![...timeSelect.options].some(o => Number(o.value) === minutes)) {
+        const opt = document.createElement('option');
+        opt.value = String(minutes);
+        opt.textContent = `${minutes} 分钟`;
+        timeSelect.appendChild(opt);
+      }
+      timeSelect.value = String(minutes);
+    }
+    const descEl = $('exam-modal-desc');
+    if (descEl) {
+      descEl.textContent = preset.description ||
+        '设置考试参数，开始后计时，交卷后统一判分。';
+    }
+    const secEl = $('exam-sections');
+    if (secEl) {
+      const sections = Array.isArray(preset.sections) ? preset.sections : [];
+      if (sections.length) {
+        secEl.innerHTML = sections.map(s =>
+          `<div class="exam-section-row"><span>${escapeHtml(s.name || '')}</span><span>${Number(s.count) || 0} 题 · ${Number(s.minutes) || 0} 分钟</span></div>`
+        ).join('');
+        secEl.style.display = 'block';
+      } else {
+        secEl.innerHTML = '';
+        secEl.style.display = 'none';
+      }
     }
     $('exam-modal').style.display = 'flex';
   }
@@ -805,13 +911,40 @@
     $('question-index').textContent = `第 ${idx} 题`;
     $('question-text').textContent = q.question;
 
-    // 听力播放按钮
-    const audioBtn = $('audio-play-btn');
-    if (q.audio) {
+    // 听力播放按钮：兼容 TTS 文本与音频 URL；DOM 缺失时动态兜底创建
+    let audioBtn = $('audio-play-btn');
+    const audioSrc = getQuestionAudio(q);
+    const isListeningQ = /听力|聴解|listening/i.test(q.category || '');
+    if (audioSrc) {
+      if (!audioBtn) {
+        audioBtn = document.createElement('button');
+        audioBtn.id = 'audio-play-btn';
+        audioBtn.className = 'audio-play-btn';
+        audioBtn.title = '播放音频';
+        audioBtn.innerHTML = '<span class="audio-icon">🔊</span><span class="audio-label">播放</span>';
+        $('question-text').insertAdjacentElement('afterend', audioBtn);
+      }
       audioBtn.style.display = 'inline-flex';
-      audioBtn.onclick = () => playAudio(q.audio, audioBtn);
-    } else {
+      audioBtn.onclick = () => {
+        if (audioSrc.type === 'url') playAudioUrl(audioSrc.src, audioBtn);
+        else playAudio(audioSrc.src, audioBtn);
+      };
+    } else if (audioBtn) {
       audioBtn.style.display = 'none';
+    }
+    // 听力题却没有音频：给出明确提示，避免用户以为题目坏了
+    let audioHint = $('audio-missing-hint');
+    if (isListeningQ && !audioSrc) {
+      if (!audioHint) {
+        audioHint = document.createElement('div');
+        audioHint.id = 'audio-missing-hint';
+        audioHint.className = 'audio-missing-hint';
+        $('question-text').insertAdjacentElement('afterend', audioHint);
+      }
+      audioHint.textContent = '⚠️ 该听力题未附带音频，可参考题干原文作答';
+      audioHint.style.display = 'block';
+    } else if (audioHint) {
+      audioHint.style.display = 'none';
     }
 
     // 收藏按钮状态
@@ -1464,6 +1597,10 @@
       category: data.category || 'custom',
       questions: questions
     };
+    // 套卷元数据（题量/时长/分区/保序）：原样保留，模拟考试时自动预填
+    if (data.exam && typeof data.exam === 'object') {
+      window.QUIZ_DATA[data.key].exam = data.exam;
+    }
     // 测评型题库：透传计分所需字段
     if (data.type === 'assessment') {
       window.QUIZ_DATA[data.key].type = 'assessment';
@@ -1728,6 +1865,7 @@
         answer: q.answer,
         explanation: q.explanation || '',
         category: q.category || '',
+        ...pickExtFields(q),
         wrongCount: 1,
         lastWrongAt: Date.now()
       };
@@ -1832,7 +1970,8 @@
       options: item.options,
       answer: item.answer,
       explanation: item.explanation,
-      category: item.category
+      category: item.category,
+      ...pickExtFields(item)
     }));
     state.selectedSubject = '__wrongbook_review__';
     window.QUIZ_DATA = window.QUIZ_DATA || {};
@@ -2526,7 +2665,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.6.0';
+  const APP_VERSION = '1.6.1';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
