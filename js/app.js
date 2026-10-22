@@ -272,6 +272,111 @@
     return null;
   }
 
+  // ===== 主观题判定 =====
+  function isSubjective(q) {
+    if (!q) return false;
+    return q.subjective === true || ((!Array.isArray(q.options) || q.options.length === 0) && (q.answerText || q.explanation));
+  }
+
+  // ===== 渲染主观题参考答案 + 自评 =====
+  function renderSubjectiveAnswer(q, container) {
+    container.innerHTML = '';
+
+    const answerPanel = document.createElement('div');
+    answerPanel.className = 'subjective-answer-panel';
+
+    const title = document.createElement('div');
+    title.className = 'subjective-answer-title';
+    title.textContent = '📖 参考答案';
+    answerPanel.appendChild(title);
+
+    const content = document.createElement('div');
+    content.className = 'subjective-answer-content';
+    content.textContent = q.answerText || '暂无参考答案';
+    answerPanel.appendChild(content);
+
+    if (q.explanation) {
+      const exp = document.createElement('div');
+      exp.className = 'subjective-explanation';
+      exp.textContent = q.explanation;
+      answerPanel.appendChild(exp);
+    }
+
+    container.appendChild(answerPanel);
+
+    // 自评按钮（练习模式）
+    if (!state.isExam && !state.isAssessment) {
+      const selfEval = document.createElement('div');
+      selfEval.className = 'subjective-self-eval';
+
+      const masteredBtn = document.createElement('button');
+      masteredBtn.className = 'self-eval-btn mastered';
+      masteredBtn.textContent = '✓ 掌握了';
+      masteredBtn.onclick = () => {
+        recordSubjectiveAnswer(q, true);
+      };
+
+      const needsPracticeBtn = document.createElement('button');
+      needsPracticeBtn.className = 'self-eval-btn needs-practice';
+      needsPracticeBtn.textContent = '✗ 需巩固';
+      needsPracticeBtn.onclick = () => {
+        recordSubjectiveAnswer(q, false);
+      };
+
+      selfEval.appendChild(masteredBtn);
+      selfEval.appendChild(needsPracticeBtn);
+      container.appendChild(selfEval);
+    } else if (state.isExam) {
+      // 考试模式：只显示「标记已作答」
+      const markBtn = document.createElement('button');
+      markBtn.className = 'mark-answered-btn';
+      markBtn.textContent = '✓ 标记已作答';
+      markBtn.onclick = () => {
+        state.answers[state.currentIndex] = {
+          questionId: q.id,
+          selected: -2, // 主观题已作答标记
+          subjective: true,
+          isRight: null // 不计入客观分
+        };
+        markBtn.disabled = true;
+        markBtn.textContent = '已标记';
+        showToast('已标记为作答，交卷后可对照参考答案自评');
+      };
+      container.appendChild(markBtn);
+    }
+  }
+
+  function recordSubjectiveAnswer(q, mastered) {
+    state.answers[state.currentIndex] = {
+      questionId: q.id,
+      selected: -1,
+      subjective: true,
+      subjectiveViewed: true,
+      isRight: mastered
+    };
+    if (mastered) {
+      state.stats.totalAnswered++;
+      state.stats.totalCorrect++;
+      saveStats();
+      logStudy();
+      state.answeredSubjects[state.selectedSubject] = true;
+      sfx.correct();
+    } else {
+      state.stats.totalAnswered++;
+      saveStats();
+      logStudy();
+      state.answeredSubjects[state.selectedSubject] = true;
+      addToWrongBook(state.selectedSubject, q);
+      sfx.wrong();
+    }
+    checkAchievements();
+    const nextBtn = $('next-btn');
+    nextBtn.disabled = false;
+    if (state.currentIndex === state.questions.length - 1) {
+      nextBtn.textContent = '查看结果';
+    }
+  }
+
   // ===== 音效系统（Web Audio API，无外部文件）=====
   let audioCtx = null;
   function getAudioCtx() {
@@ -426,6 +531,47 @@
     let idx = 0;
     for (let i = 0; i < today.length; i++) idx += today.charCodeAt(i);
     return DAILY_QUOTES[idx % DAILY_QUOTES.length];
+  }
+
+  // ===== 教资考试倒计时数据 =====
+  // 来源：教育部教育考试院公告 / 行业汇总（未官方公布的日期标注「预计」）
+  const TEACHER_EXAM_SCHEDULE = [
+    { name: '2026年下半年 中小学教师资格面试', date: '2026-12-05', endDate: '2026-12-06', confirmed: true },
+    { name: '2027年上半年 中小学教师资格笔试', date: '2027-03-06', endDate: '2027-03-06', confirmed: false },
+    { name: '2027年上半年 中小学教师资格面试', date: '2027-05-15', endDate: '2027-05-16', confirmed: false },
+    { name: '2027年下半年 中小学教师资格笔试', date: '2027-09-11', endDate: '2027-09-11', confirmed: false },
+    { name: '2027年下半年 中小学教师资格面试', date: '2027-12-04', endDate: '2027-12-05', confirmed: false }
+  ];
+
+  function renderExamCountdown() {
+    const container = $('exam-countdown-list');
+    if (!container) return;
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const upcoming = TEACHER_EXAM_SCHEDULE.filter(e => {
+      const end = new Date(e.endDate + 'T00:00:00');
+      return end >= now;
+    }).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 2);
+
+    if (upcoming.length === 0) {
+      container.innerHTML = '<div class="countdown-empty">暂无即将到来的考试安排</div>';
+      return;
+    }
+
+    container.innerHTML = upcoming.map(exam => {
+      const examDate = new Date(exam.date + 'T00:00:00');
+      const diffDays = Math.ceil((examDate - now) / 86400000);
+      const tag = exam.confirmed ? '' : '<span class="countdown-tag">预计</span>';
+      const dateStr = exam.date === exam.endDate
+        ? exam.date.replace(/-/g, '年').replace(/(\d{4})年(\d{2})月/, '$1年$2月').replace('月', '月') + '日'
+        : `${exam.date} 至 ${exam.endDate}`.replace(/-/g, '/');
+      return `
+        <div class="countdown-item">
+          <div class="countdown-name">${tag}${escapeHtml(exam.name)}</div>
+          <div class="countdown-date">${dateStr}</div>
+          <div class="countdown-days">还有 <strong>${diffDays}</strong> 天</div>
+        </div>`;
+    }).join('');
   }
 
   // ===== XP / 等级系统 =====
@@ -690,13 +836,17 @@
 
   // ===== 题量和模式选择 =====
   function initSettings() {
-    $('qty-options').addEventListener('click', (e) => {
-      const btn = e.target.closest('.qty-btn');
-      if (!btn) return;
-      document.querySelectorAll('.qty-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.qty = parseInt(btn.dataset.qty, 10);
-    });
+    const qtySlider = $('qty-slider');
+    const qtyValueEl = $('qty-value');
+    if (qtySlider) {
+      qtySlider.addEventListener('input', () => {
+        state.qty = parseInt(qtySlider.value, 10);
+        if (qtyValueEl) qtyValueEl.textContent = state.qty;
+      });
+      // 初始化显示
+      qtySlider.value = state.qty;
+      if (qtyValueEl) qtyValueEl.textContent = state.qty;
+    }
 
     $('mode-options').addEventListener('click', (e) => {
       const btn = e.target.closest('.mode-btn');
@@ -792,10 +942,12 @@
       if (categorySection) categorySection.style.display = 'none';
       renderPaperCard(subject);
     } else if (has && !isAss) {
-      // 普通题库：以首页当前选中的题量为准，避免模拟考试改过 state.qty 后不同步
-      const activeQty = document.querySelector('.qty-btn.active');
-      const qty = activeQty ? parseInt(activeQty.dataset.qty, 10) : NaN;
-      if (qty > 0) state.qty = qty;
+      // 普通题库：从滑块读取当前题量
+      const qtySlider = $('qty-slider');
+      if (qtySlider) {
+        const qty = parseInt(qtySlider.value, 10);
+        if (qty > 0) state.qty = qty;
+      }
     }
 
     $('start-btn').disabled = !has || isAss || isPaper;
@@ -1391,30 +1543,59 @@
       showToast(nowFav ? '⭐ 已收藏' : '已取消收藏');
     };
 
-    // 选项
+    // 选项 / 主观题作答区
     const optionsContainer = $('options-list');
     optionsContainer.innerHTML = '';
     const currentAnswer = state.answers[state.currentIndex];
-    q.options.forEach((option, i) => {
-      const item = document.createElement('div');
-      item.className = 'option-item';
-      item.dataset.index = i;
-      // 考试模式/测评模式：高亮已选选项（不显示对错）
-      if ((state.isExam || state.isAssessment) && currentAnswer && currentAnswer.selected === i) {
-        item.classList.add('selected');
-      }
-      item.innerHTML = `
-        <div class="option-label">${OPTION_LABELS[i]}</div>
-        <div class="option-text">${option}</div>
-      `;
-      item.addEventListener('click', () => selectOption(i));
-      optionsContainer.appendChild(item);
-    });
 
-    // 隐藏答案解析（考试模式始终隐藏）
+    if (isSubjective(q)) {
+      // 主观题：不显示选项，改为「查看答案」+ 自评按钮
+      const subjectiveArea = document.createElement('div');
+      subjectiveArea.className = 'subjective-area';
+
+      if (!currentAnswer || !currentAnswer.subjectiveViewed) {
+        // 未查看答案：只显示查看答案按钮
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'view-answer-btn';
+        viewBtn.textContent = '👀 查看答案';
+        viewBtn.onclick = () => {
+          renderSubjectiveAnswer(q, subjectiveArea);
+        };
+        subjectiveArea.appendChild(viewBtn);
+      } else {
+        // 已查看答案：显示参考答案 + 自评按钮
+        renderSubjectiveAnswer(q, subjectiveArea);
+      }
+
+      optionsContainer.appendChild(subjectiveArea);
+
+      // 主观题下一题按钮始终可用（练习模式）
+      if (!state.isExam && !state.isAssessment) {
+        nextBtn.disabled = false;
+        nextBtn.textContent = state.currentIndex === total - 1 ? '查看结果' : '下一题';
+      }
+    } else {
+      q.options.forEach((option, i) => {
+        const item = document.createElement('div');
+        item.className = 'option-item';
+        item.dataset.index = i;
+        // 考试模式/测评模式：高亮已选选项（不显示对错）
+        if ((state.isExam || state.isAssessment) && currentAnswer && currentAnswer.selected === i) {
+          item.classList.add('selected');
+        }
+        item.innerHTML = `
+          <div class="option-label">${OPTION_LABELS[i]}</div>
+          <div class="option-text">${option}</div>
+        `;
+        item.addEventListener('click', () => selectOption(i));
+        optionsContainer.appendChild(item);
+      });
+    }
+
+    // 隐藏答案解析（考试模式始终隐藏；主观题已在上方单独处理）
     if (state.isExam) {
       $('answer-result').style.display = 'none';
-    } else {
+    } else if (!isSubjective(q)) {
       $('answer-result').style.display = 'none';
     }
 
@@ -1646,14 +1827,19 @@
     if (detailBox) detailBox.style.display = '';
     $('retry-btn').textContent = state.paperPracticeMode ? '再练一次' : '再刷一组';
     const total = state.questions.length;
-    const correctCount = state.answers.filter(a => a && a.isRight).length;
-    const wrongCount = total - correctCount;
-    const rate = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+    // 分离客观题和主观题统计
+    const objectiveAnswers = state.answers.filter((a, i) => a && !isSubjective(state.questions[i]));
+    const subjectiveAnswers = state.answers.filter((a, i) => a && isSubjective(state.questions[i]));
+    const correctCount = objectiveAnswers.filter(a => a.isRight).length;
+    const wrongCount = objectiveAnswers.length - correctCount;
+    const rate = objectiveAnswers.length > 0 ? Math.round((correctCount / objectiveAnswers.length) * 100) : 0;
     const score = rate;
+    const subjectiveMastered = subjectiveAnswers.filter(a => a.isRight).length;
+    const subjectiveNeedsPractice = subjectiveAnswers.length - subjectiveMastered;
 
     $('score-number').textContent = score;
-    $('detail-correct').textContent = correctCount;
-    $('detail-wrong').textContent = wrongCount;
+    $('detail-correct').textContent = correctCount + (subjectiveAnswers.length ? `（+${subjectiveMastered}主观）` : '');
+    $('detail-wrong').textContent = wrongCount + (subjectiveAnswers.length ? `（+${subjectiveNeedsPractice}主观）` : '');
     $('detail-rate').textContent = rate + '%';
 
     // 图标和消息
@@ -1764,8 +1950,36 @@
 
     reviewList.innerHTML = state.questions
       .map((q, i) => ({ q, i, ans: state.answers[i] }))
-      .filter(({ ans }) => reviewFilter === 'all' || (ans && !ans.isRight))
+      .filter(({ ans }) => {
+        if (reviewFilter === 'all') return true;
+        // 只看错题：主观题 mastered=false 也算错
+        if (!ans) return false;
+        if (ans.subjective && ans.isRight === false) return true;
+        return !ans.isRight;
+      })
       .map(({ q, i, ans }) => {
+        // 主观题特殊处理
+        if (isSubjective(q)) {
+          const isRight = !!(ans && ans.isRight);
+          const statusCls = isRight ? 'correct' : 'wrong';
+          const statusText = isRight ? '✓ 已掌握' : (ans ? '✗ 需巩固' : '✗ 未自评');
+          const answerTextHtml = q.answerText
+            ? `<div class="subjective-answer-content">${escapeHtml(String(q.answerText)).replace(/\\n/g, '<br>')}</div>`
+            : '';
+          const expHtml = q.explanation
+            ? `<div class="review-explanation">💡 ${escapeHtml(String(q.explanation))}</div>`
+            : '';
+          return `
+            <div class="review-item subjective ${statusCls}">
+              <div class="review-question">${i + 1}. [主观题] ${escapeHtml(String(q.question))}</div>
+              <div class="review-answer">
+                <span class="${isRight ? 'correct-answer' : 'wrong-answer'}">${statusText}</span>
+              </div>
+              ${answerTextHtml}
+              ${expHtml}
+            </div>`;
+        }
+
         const correctIdx = ans ? ans.correct : q.answer;
         const isRight = !!(ans && ans.isRight);
         const unanswered = !ans || ans.selected < 0;
@@ -2022,7 +2236,18 @@
     // 校验每道题
     for (let i = 0; i < data.questions.length; i++) {
       const q = data.questions[i];
-      if (!q.question || !Array.isArray(q.options) || q.options.length < 2) {
+      if (!q.question) {
+        return { valid: false, error: `第 ${i + 1} 题缺少题干` };
+      }
+      // 主观题：允许无选项，但必须有 answerText
+      if (q.subjective === true || ((!Array.isArray(q.options) || q.options.length === 0) && (q.answerText || q.explanation))) {
+        if (!q.answerText && !q.explanation) {
+          return { valid: false, error: `第 ${i + 1} 题是主观题，需要填写 answerText 或 explanation` };
+        }
+        continue;
+      }
+      // 客观题：必须有选项和合法答案
+      if (!Array.isArray(q.options) || q.options.length < 2) {
         return { valid: false, error: `第 ${i + 1} 题格式错误：缺少题干或选项不足` };
       }
       if (typeof q.answer !== 'number' || q.answer < 0 || q.answer >= q.options.length) {
@@ -3162,7 +3387,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.6.3';
+  const APP_VERSION = '1.7.0';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -3714,6 +3939,7 @@
     renderSubjectList();
     renderHomeBadges();
     renderDailyQuote();
+    renderExamCountdown();
     typewriterTitle();
     initSettings();
     bindQuizEvents();
