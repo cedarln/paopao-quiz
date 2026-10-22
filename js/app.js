@@ -233,6 +233,83 @@
     levelUp: () => { playTone(523, 0.1, 'sine', 0.15); setTimeout(() => playTone(659, 0.1, 'sine', 0.15), 100); setTimeout(() => playTone(784, 0.2, 'sine', 0.15), 200); }
   };
 
+  // ===== 听力播放（Web Speech API，兼容 Android WebView）=====
+  // Capacitor 在 Android 用系统 WebView（Chromium），Web Speech 在 WebView 里有 3 个坑：
+  //   1) getVoices() 首次返回空数组，需等 voiceschanged
+  //   2) 设备未装 TTS 引擎时 speak() 静默失败，按钮卡 playing
+  //   3) 没有 onstart 反馈，状态切换不可靠
+  // 下面用 voice 缓存 + watchdog 超时 + onstart 三重兜底。
+  let cachedVoices = [];
+  let voicesReady = false;
+  function refreshVoices() {
+    if (!('speechSynthesis' in window)) return;
+    const v = window.speechSynthesis.getVoices();
+    if (v && v.length) { cachedVoices = v; voicesReady = true; }
+  }
+  if ('speechSynthesis' in window) {
+    refreshVoices();
+    try { window.speechSynthesis.addEventListener('voiceschanged', refreshVoices); } catch (e) {}
+    window.speechSynthesis.onvoiceschanged = refreshVoices;
+  }
+
+  function setAudioBtnState(btn, playing, label) {
+    if (!btn) return;
+    btn.classList.toggle('playing', playing);
+    const lab = btn.querySelector('.audio-label');
+    if (lab) lab.textContent = label || (playing ? '播放中…' : '播放');
+  }
+
+  function playAudio(text, btn) {
+    if (!('speechSynthesis' in window) || typeof SpeechSynthesisUtterance === 'undefined') {
+      showToast('此设备不支持语音播放（Web Speech API 不可用）');
+      return;
+    }
+    const synth = window.speechSynthesis;
+    if (synth.speaking || synth.pending) {
+      synth.cancel();
+      setAudioBtnState(btn, false);
+      return;
+    }
+    setAudioBtnState(btn, true, '准备中…');
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.85;
+    utterance.pitch = 1;
+    if (voicesReady) {
+      const jaVoice = cachedVoices.find(v => v.lang && v.lang.toLowerCase().startsWith('ja'));
+      if (jaVoice) utterance.voice = jaVoice;
+    }
+
+    let started = false, ended = false;
+    const watchdog = setTimeout(() => {
+      if (!started && !ended) {
+        try { synth.cancel(); } catch (e) {}
+        setAudioBtnState(btn, false);
+        showToast('此设备没有可用的日语 TTS 引擎。请在系统「设置 → 语言/无障碍 → 文字转语音」中启用，或安装 Google TTS。');
+      }
+    }, 4000);
+
+    utterance.onstart = () => { started = true; clearTimeout(watchdog); setAudioBtnState(btn, true); };
+    utterance.onend = () => { ended = true; clearTimeout(watchdog); setAudioBtnState(btn, false); };
+    utterance.onerror = (e) => {
+      ended = true; clearTimeout(watchdog); setAudioBtnState(btn, false);
+      const err = (e && e.error) || 'unknown';
+      if (err !== 'canceled' && err !== 'interrupted') {
+        showToast('播放失败：' + err + (err === 'synthesis-failed' ? '（TTS 引擎异常）' : ''));
+      }
+    };
+
+    // 某些 Android WebView 直接 speak() 会被吞，延迟一帧后调用更稳
+    setTimeout(() => {
+      try { synth.speak(utterance); }
+      catch (err) {
+        ended = true; clearTimeout(watchdog); setAudioBtnState(btn, false);
+        showToast('语音引擎异常：' + (err.message || err));
+      }
+    }, 60);
+  }
+
   // ===== 每日一言 =====
   const DAILY_QUOTES = [
     '今天也要元气满满地学习呀！✨',
@@ -727,6 +804,15 @@
     $('question-category').textContent = q.category || '选择题';
     $('question-index').textContent = `第 ${idx} 题`;
     $('question-text').textContent = q.question;
+
+    // 听力播放按钮
+    const audioBtn = $('audio-play-btn');
+    if (q.audio) {
+      audioBtn.style.display = 'inline-flex';
+      audioBtn.onclick = () => playAudio(q.audio, audioBtn);
+    } else {
+      audioBtn.style.display = 'none';
+    }
 
     // 收藏按钮状态
     const favBtn = $('favorite-btn');
@@ -2440,7 +2526,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.5.1';
+  const APP_VERSION = '1.6.0';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
