@@ -2771,3 +2771,233 @@ body.custom-bg::before {
 .update-browser-btn:active {
   color: var(--primary);
 }
+
+/* ===== 题量滑块 ===== */
+.qty-slider {
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: 8px;
+}
+
+.qty-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+}
+
+.qty-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  cursor: pointer;
+  border: none;
+}
+
+/* ===== 主观题作答区 ===== */
+.subjective-area {
+  padding: 16px 0;
+}
+
+.view-answer-btn {
+  width: 100%;
+  padding: 14px;
+  border: 2px dashed var(--border);
+  background: transparent;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-answer-btn:hover {
+  background: rgba(79, 70, 229, 0.05);
+  border-color: var(--primary);
+}
+
+.view-answer-btn:active {
+  transform: scale(0.98);
+}
+
+.subjective-answer-panel {
+  background: #f8f9ff;
+  border: 1px solid #e0e4f5;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.subjective-answer-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.subjective-answer-content {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+}
+
+.subjective-explanation {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e4f5;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.subjective-self-eval {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.self-eval-btn {
+  flex: 1;
+  padding: 12px;
+  border: 2px solid;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.self-eval-btn.mastered {
+  border-color: #10b981;
+  background: white;
+  color: #10b981;
+}
+
+.self-eval-btn.mastered:hover {
+  background: #10b981;
+  color: white;
+}
+
+.self-eval-btn.needs-practice {
+  border-color: #ef4444;
+  background: white;
+  color: #ef4444;
+}
+
+.self-eval-btn.needs-practice:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.mark-answered-btn {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid var(--primary);
+  background: white;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mark-answered-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+}
+
+.mark-answered-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* 回顾中的主观题样式 */
+.review-item.subjective {
+  border-left: 3px solid var(--primary);
+}
+
+/* ===== 教资考试倒计时卡片 ===== */
+.exam-countdown-card {
+  margin-top: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(251, 191, 36, 0.2);
+}
+
+.countdown-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #92400e;
+  margin-bottom: 12px;
+}
+
+.countdown-item {
+  background: white;
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.countdown-item:last-child {
+  margin-bottom: 0;
+}
+
+.countdown-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.countdown-tag {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 6px;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 4px;
+  margin-right: 6px;
+  font-weight: 500;
+}
+
+.countdown-date {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 12px;
+}
+
+.countdown-days {
+  font-size: 14px;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.countdown-days strong {
+  font-size: 18px;
+  color: #d97706;
+}
+
+.countdown-empty {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 8px 0;
+}
+
