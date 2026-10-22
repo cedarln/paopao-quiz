@@ -27,6 +27,12 @@
     examTimeLimit: 0, // 考试时长（秒），0 表示不限时
     examTimeLeft: 0, // 剩余秒数
     examTimer: null, // 倒计时定时器
+    paperMode: false, // 是否为套卷考试模式（按卷面分节计时）
+    paperPracticeMode: false, // 是否为套卷练习模式（整卷顺序、即时解析）
+    paperSections: [], // 套卷分区：{ name, count, minutes, start, end }
+    paperSectionIndex: 0, // 当前分区下标
+    paperSectionTimeLeft: 0, // 当前分区剩余秒数
+    paperPendingSection: null, // 分节弹窗中即将进入的分区下标
     reviewMode: false, // 当前是否为错题再练模式
     activeCategory: null, // 当前选中的题目分类筛选
     combo: 0, // 当前连击数
@@ -555,6 +561,106 @@
     checkStartButton();
   }
 
+  // ===== 套卷识别与分节 =====
+  // 带 preserveOrder 或 sections 的 exam 元数据，视为“套卷”而非普通题库：
+  // 题量、时长、顺序都由卷面决定，首页不再让用户自选。
+  function isPaperBank(subject) {
+    if (!subject || subject.type === 'assessment') return false;
+    const preset = subject.exam;
+    if (!preset || typeof preset !== 'object') return false;
+    return preset.preserveOrder === true || (Array.isArray(preset.sections) && preset.sections.length > 0);
+  }
+
+  function getPaperTotal(subject, preset) {
+    const total = Array.isArray(subject.questions) ? subject.questions.length : 0;
+    const presetCount = parseInt(preset && preset.count, 10);
+    return presetCount > 0 ? Math.min(presetCount, total) : total;
+  }
+
+  function buildPaperSections(preset, total) {
+    const raw = Array.isArray(preset.sections) ? preset.sections : [];
+    const sections = [];
+    let cursor = 0;
+    raw.forEach((s, i) => {
+      if (!s || cursor >= total) return;
+      const remain = total - cursor;
+      const count = Math.max(0, Math.min(parseInt(s.count, 10) || 0, remain));
+      if (!count) return;
+      const minutes = Math.max(1, parseInt(s.minutes, 10) || 0);
+      sections.push({
+        name: s.name || `第 ${i + 1} 节`,
+        count,
+        minutes,
+        start: cursor,
+        end: cursor + count - 1
+      });
+      cursor += count;
+    });
+    // 分区题量少于卷面总题量时补一节，确保不丢题
+    if (cursor < total) {
+      const presetMinutes = Math.max(1, parseInt(preset.minutes, 10) || 0);
+      const usedMinutes = sections.reduce((sum, s) => sum + s.minutes, 0);
+      const minutes = Math.max(1, presetMinutes - usedMinutes || Math.ceil((total - cursor) / 2));
+      sections.push({
+        name: '补充试题',
+        count: total - cursor,
+        minutes,
+        start: cursor,
+        end: total - 1
+      });
+    }
+    if (!sections.length) {
+      sections.push({
+        name: '整卷',
+        count: total,
+        minutes: Math.max(1, parseInt(preset.minutes, 10) || 90),
+        start: 0,
+        end: total - 1
+      });
+    }
+    return sections;
+  }
+
+  function renderPaperCard(subject) {
+    const preset = subject.exam || {};
+    const total = getPaperTotal(subject, preset);
+    const sections = buildPaperSections(preset, total);
+    const minutes = sections.reduce((sum, s) => sum + s.minutes, 0);
+
+    const titleEl = $('paper-card-title');
+    if (titleEl) titleEl.textContent = subject.name || '模拟套卷';
+    const subEl = $('paper-card-sub');
+    if (subEl) subEl.textContent = '按真实卷面顺序整卷作答';
+
+    const metaEl = $('paper-meta');
+    if (metaEl) {
+      const items = [
+        `📄 整卷 ${total} 题`,
+        `⏱️ 共 ${minutes} 分钟`,
+        `🧭 ${sections.length} 节`,
+        '🏁 交卷后统一判分'
+      ];
+      metaEl.innerHTML = items.map(t => `<span class="paper-meta-item">${escapeHtml(t)}</span>`).join('');
+    }
+
+    const secEl = $('paper-sections-preview');
+    if (secEl) {
+      secEl.innerHTML = sections.map((s, i) => `
+        <div class="paper-section-preview">
+          <span class="paper-step">${i + 1}</span>
+          <span class="paper-sec-name">${escapeHtml(s.name)}</span>
+          <span class="paper-sec-meta">${s.count} 题 · ${s.minutes} 分</span>
+        </div>
+      `).join('');
+    }
+
+    const noteEl = $('paper-note');
+    if (noteEl) {
+      const desc = preset.description ? `${preset.description}\n` : '';
+      noteEl.textContent = `${desc}套卷按卷面顺序整卷作答，各节独立计时；本节结束后不可回看，交卷后统一判分。`;
+    }
+  }
+
   // ===== 题量和模式选择 =====
   function initSettings() {
     $('qty-options').addEventListener('click', (e) => {
@@ -574,6 +680,22 @@
     });
 
     $('start-btn').addEventListener('click', startQuiz);
+
+    // 套卷专属入口：直接按卷面预设开始，不再弹题量/时长配置
+    $('paper-start-btn').addEventListener('click', startPaperExam);
+    $('paper-practice-btn').addEventListener('click', startPaperPractice);
+
+    // 套卷分节弹窗
+    $('paper-section-next-btn').addEventListener('click', () => {
+      const next = state.paperPendingSection;
+      if (next === null || next === undefined) return;
+      startPaperSection(next);
+    });
+    $('paper-section-submit-btn').addEventListener('click', () => {
+      if (!window.confirm('确定结束套卷考试并交卷吗？未作答题目将计为错误。')) return;
+      closePaperSectionModal();
+      submitExam();
+    });
 
     // 测评型题库专属按钮
     $('as-start-btn').addEventListener('click', startQuiz);
@@ -614,20 +736,44 @@
     return snapshot.every((q, i) => q && q.question === subject.questions[i].question);
   }
 
-  // 首页：按选中题库类型切换 刷题设置/测评按钮，并刷新测评按钮状态
+  // 首页：按选中题库类型切换 刷题设置/套卷/测评按钮，并刷新按钮状态
   function checkStartButton() {
     const key = state.selectedSubject;
-    const has = !!key;
-    const isAss = has && window.QUIZ_DATA[key] && window.QUIZ_DATA[key].type === 'assessment';
+    const subject = key ? window.QUIZ_DATA[key] : null;
+    const has = !!subject;
+    const isAss = !!(subject && subject.type === 'assessment');
+    const isPaper = isPaperBank(subject);
     const settingsCard = $('quiz-settings-card');
     const settingsTitle = $('quiz-settings-title');
     const assActions = $('assessment-actions');
-    if (settingsCard) settingsCard.style.display = isAss ? 'none' : '';
-    if (settingsTitle) settingsTitle.style.display = isAss ? 'none' : '';
+    const normalActions = $('normal-actions');
+    const paperTitle = $('paper-mode-title');
+    const paperCard = $('paper-mode-card');
+    const paperActions = $('paper-actions');
+
+    if (settingsCard) settingsCard.style.display = (isAss || isPaper) ? 'none' : '';
+    if (settingsTitle) settingsTitle.style.display = (isAss || isPaper) ? 'none' : '';
     if (assActions) assActions.style.display = isAss ? 'flex' : 'none';
-    $('start-btn').disabled = !has || isAss;
-    $('exam-start-btn').disabled = !has || isAss;
-    if (!isAss || !key) return;
+    if (normalActions) normalActions.style.display = (isAss || isPaper) ? 'none' : 'flex';
+    if (paperTitle) paperTitle.style.display = isPaper ? '' : 'none';
+    if (paperCard) paperCard.style.display = isPaper ? '' : 'none';
+    if (paperActions) paperActions.style.display = isPaper ? 'flex' : 'none';
+
+    if (isPaper) {
+      state.activeCategory = null;
+      const categorySection = $('category-section');
+      if (categorySection) categorySection.style.display = 'none';
+      renderPaperCard(subject);
+    } else if (has && !isAss) {
+      // 普通题库：以首页当前选中的题量为准，避免模拟考试改过 state.qty 后不同步
+      const activeQty = document.querySelector('.qty-btn.active');
+      const qty = activeQty ? parseInt(activeQty.dataset.qty, 10) : NaN;
+      if (qty > 0) state.qty = qty;
+    }
+
+    $('start-btn').disabled = !has || isAss || isPaper;
+    $('exam-start-btn').disabled = !has || isAss || isPaper;
+    if (isPaper || !isAss || !key) return;
 
     // 测评按钮状态机：
     //   有未完成进度 → 继续测试 + 清除
@@ -660,6 +806,9 @@
     state.activeCategory = null;
     state.isAssessment = true;
     state.isExam = false;
+    state.paperMode = false;
+    state.paperPracticeMode = false;
+    state.paperSections = [];
     state.questions = draft.questions;
     state.answers = draft.answers;
     state.currentIndex = Math.min(draft.currentIndex || 0, draft.questions.length - 1);
@@ -687,6 +836,14 @@
   // ===== 开始刷题 =====
   function startQuiz() {
     if (!state.selectedSubject) return;
+
+    // 普通刷题/考试入口：清理可能残留的套卷状态
+    state.paperMode = false;
+    state.paperPracticeMode = false;
+    state.paperSections = [];
+    state.paperSectionIndex = 0;
+    state.paperSectionTimeLeft = 0;
+    state.paperPendingSection = null;
 
     const subject = window.QUIZ_DATA[state.selectedSubject];
     let questions = [...subject.questions];
@@ -741,6 +898,178 @@
     }
   }
 
+  // ===== 套卷考试 / 套卷练习 =====
+  // 套卷不经过“题量/时长”配置：整卷题序、分节时长全部来自题库 exam 元数据。
+  function startPaperExam() {
+    const key = state.selectedSubject;
+    const subject = key ? window.QUIZ_DATA[key] : null;
+    if (!isPaperBank(subject)) {
+      showToast('请选择一个套卷题库');
+      return;
+    }
+    const preset = subject.exam || {};
+    const total = getPaperTotal(subject, preset);
+    if (!total) {
+      showToast('该套卷暂无题目');
+      return;
+    }
+
+    const questions = subject.questions.slice(0, total);
+    const sections = buildPaperSections(preset, total);
+
+    stopExamTimer();
+    closePaperSectionModal();
+    state.isAssessment = false;
+    state.reviewMode = false;
+    state.isExam = true;
+    state.paperMode = true;
+    state.paperPracticeMode = false;
+    state.activeCategory = null;
+    state.mode = 'sequential';
+    state.questions = questions;
+    state.currentIndex = 0;
+    state.answers = [];
+    state.combo = 0;
+    state.paperSections = sections;
+    state.paperSectionIndex = 0;
+    state.paperSectionTimeLeft = sections[0].minutes * 60;
+    state.examTimeLimit = sections.reduce((sum, s) => sum + s.minutes, 0) * 60;
+    state.examTimeLeft = state.examTimeLimit;
+
+    showPage('quiz');
+    renderQuestion();
+    startExamTimer();
+    showToast(`套卷考试开始：${total} 题 · 共 ${Math.round(state.examTimeLimit / 60)} 分钟`);
+  }
+
+  function startPaperPractice() {
+    const key = state.selectedSubject;
+    const subject = key ? window.QUIZ_DATA[key] : null;
+    if (!isPaperBank(subject)) {
+      showToast('请选择一个套卷题库');
+      return;
+    }
+    const preset = subject.exam || {};
+    const total = getPaperTotal(subject, preset);
+    if (!total) {
+      showToast('该套卷暂无题目');
+      return;
+    }
+
+    stopExamTimer();
+    closePaperSectionModal();
+    state.isAssessment = false;
+    state.reviewMode = false;
+    state.isExam = false;
+    state.paperMode = false;
+    state.paperPracticeMode = true;
+    state.activeCategory = null;
+    state.mode = 'sequential';
+    state.questions = subject.questions.slice(0, total);
+    state.currentIndex = 0;
+    state.answers = [];
+    state.combo = 0;
+    state.paperSections = [];
+    state.paperSectionIndex = 0;
+    state.paperSectionTimeLeft = 0;
+    state.examTimeLimit = 0;
+    state.examTimeLeft = 0;
+
+    showPage('quiz');
+    renderQuestion();
+    showToast('套卷练习：按卷面顺序作答，答完即时显示解析');
+  }
+
+  function startPaperSection(index) {
+    const section = state.paperSections[index];
+    if (!section) return;
+    closePaperSectionModal();
+    state.paperSectionIndex = index;
+    state.paperSectionTimeLeft = section.minutes * 60;
+    state.currentIndex = section.start;
+    showPage('quiz');
+    renderQuestion();
+    startExamTimer();
+    showToast(`第 ${index + 1} 节 · ${section.name}（${section.minutes} 分钟）`);
+  }
+
+  function closePaperSectionModal() {
+    const modal = $('paper-section-modal');
+    if (modal) modal.style.display = 'none';
+    state.paperPendingSection = null;
+  }
+
+  function countPaperSectionAnswers(section) {
+    let answered = 0;
+    for (let i = section.start; i <= section.end; i++) {
+      const ans = state.answers[i];
+      if (ans && ans.selected >= 0) answered++;
+    }
+    return answered;
+  }
+
+  function showPaperSectionModal(completedIndex, reason) {
+    const completed = state.paperSections[completedIndex];
+    const next = state.paperSections[completedIndex + 1];
+    if (!completed || !next) return;
+
+    const answered = countPaperSectionAnswers(completed);
+    const unanswered = completed.count - answered;
+    state.paperPendingSection = completedIndex + 1;
+
+    $('paper-section-modal-icon').textContent = reason === 'timeup' ? '⏰' : '✅';
+    $('paper-section-modal-title').textContent =
+      reason === 'timeup' ? '本节时间到' : '本节已结束';
+    $('paper-section-modal-desc').textContent = reason === 'timeup'
+      ? `「${completed.name}」答题时间已用完，本节答案已锁定，不能返回修改。`
+      : `「${completed.name}」已结束，本节答案已锁定，不能返回修改。`;
+    $('paper-section-modal-stats').innerHTML = `
+      <div class="paper-modal-stat"><span class="pm-value">${answered}</span><span class="pm-label">已作答</span></div>
+      <div class="paper-modal-stat"><span class="pm-value">${unanswered}</span><span class="pm-label">未作答</span></div>
+      <div class="paper-modal-stat"><span class="pm-value">${next.minutes}分</span><span class="pm-label">下节时长</span></div>
+    `;
+    $('paper-section-modal-next').innerHTML =
+      `下一节：<strong>${escapeHtml(next.name)}</strong><br>${next.count} 题 · ${next.minutes} 分钟 · 独立计时`;
+    $('paper-section-next-btn').textContent = `进入第 ${completedIndex + 2} 节`;
+    $('paper-section-modal').style.display = 'flex';
+  }
+
+  function handlePaperSectionTimeout() {
+    const isLast = state.paperSectionIndex >= state.paperSections.length - 1;
+    if (isLast) {
+      showToast('考试时间到，自动交卷');
+      submitExam();
+      return;
+    }
+    showToast('本节时间到，答案已锁定');
+    showPaperSectionModal(state.paperSectionIndex, 'timeup');
+  }
+
+  // 套卷考试中点击“下一题 / 进入下一节 / 交卷”
+  function handlePaperNext() {
+    const section = state.paperSections[state.paperSectionIndex];
+    if (!section) return;
+    if (state.currentIndex < section.end) {
+      goToQuestion(state.currentIndex + 1);
+      return;
+    }
+
+    const isLastSection = state.paperSectionIndex >= state.paperSections.length - 1;
+    if (isLastSection) {
+      const unanswered = state.questions.filter((q, i) => {
+        const ans = state.answers[i];
+        return !ans || ans.selected < 0;
+      }).length;
+      if (unanswered > 0 && !window.confirm(`还有 ${unanswered} 题未作答，确定交卷吗？`)) return;
+      submitExam();
+      return;
+    }
+
+    if (!window.confirm(`「${section.name}」还未结束，确定提前进入下一节吗？本节剩余时间不会保留。`)) return;
+    stopExamTimer();
+    showPaperSectionModal(state.paperSectionIndex, 'early');
+  }
+
   // ===== 模拟考试 =====
   function openExamConfig() {
     if (!state.selectedSubject) {
@@ -748,6 +1077,11 @@
       return;
     }
     const subject = window.QUIZ_DATA[state.selectedSubject] || {};
+    // 套卷有完整预设，直接开考，不弹配置窗
+    if (isPaperBank(subject)) {
+      startPaperExam();
+      return;
+    }
     const preset = subject.exam && typeof subject.exam === 'object' ? subject.exam : {};
     const total = Array.isArray(subject.questions) ? subject.questions.length : 0;
 
@@ -809,8 +1143,21 @@
   }
 
   function startExamTimer() {
+    stopExamTimer();
     updateExamTimerDisplay();
     state.examTimer = setInterval(() => {
+      // 套卷：头部显示本节剩余时间，按 exam.sections 独立计时
+      if (state.paperMode && state.paperSections.length) {
+        state.paperSectionTimeLeft = Math.max(0, state.paperSectionTimeLeft - 1);
+        state.examTimeLeft = Math.max(0, state.examTimeLeft - 1);
+        updateExamTimerDisplay();
+        if (state.paperSectionTimeLeft <= 0) {
+          stopExamTimer();
+          handlePaperSectionTimeout();
+        }
+        return;
+      }
+
       state.examTimeLeft--;
       updateExamTimerDisplay();
       if (state.examTimeLeft <= 0) {
@@ -831,15 +1178,17 @@
   function updateExamTimerDisplay() {
     const el = $('exam-timer');
     if (!el) return;
-    const m = Math.floor(state.examTimeLeft / 60);
-    const s = state.examTimeLeft % 60;
+    const timeLeft = state.paperMode ? state.paperSectionTimeLeft : state.examTimeLeft;
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
     el.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     // 剩余不足1分钟变红
-    el.classList.toggle('timer-warning', state.examTimeLeft <= 60);
+    el.classList.toggle('timer-warning', timeLeft <= 60);
   }
 
   function submitExam() {
     stopExamTimer();
+    closePaperSectionModal();
     state.isExam = false;
 
     // 统计答题情况并更新全局统计
@@ -866,6 +1215,12 @@
   }
 
   function showExamResult() {
+    // 结果页可能被测评结果隐藏过分数区，考试结果需要恢复显示
+    const scoreBox = $('result-score-box');
+    const detailBox = $('result-detail-box');
+    if (scoreBox) scoreBox.style.display = '';
+    if (detailBox) detailBox.style.display = '';
+
     const total = state.questions.length;
     const answered = state.answers.filter(a => a && a.selected >= 0).length;
     const correctCount = state.answers.filter(a => a && a.isRight).length;
@@ -884,8 +1239,31 @@
     else if (rate >= 60) { icon = '💪'; message = '及格！多复习错题，争取更高分。'; }
     else { icon = '📚'; message = '需要加强练习，重点复习错题本中的题目。'; }
     $('result-icon').textContent = icon;
-    $('result-title').textContent = '考试结束';
-    $('result-message').textContent = message;
+
+    if (state.paperMode && state.paperSections.length) {
+      // 套卷结果：额外给出各节答对情况，方便定位薄弱分区
+      const sectionLines = state.paperSections.map(section => {
+        let answered = 0;
+        let correct = 0;
+        for (let i = section.start; i <= section.end; i++) {
+          const ans = state.answers[i];
+          if (ans && ans.selected >= 0) {
+            answered++;
+            if (ans.isRight) correct++;
+          }
+        }
+        const unanswered = section.count - answered;
+        return `${section.name}：${correct}/${section.count} 题${unanswered > 0 ? `（未答 ${unanswered}）` : ''}`;
+      });
+      $('result-title').textContent = '套卷考试结束';
+      $('result-message').textContent =
+        `${message}\n\n各节答对情况：\n${sectionLines.join('\n')}`;
+      $('retry-btn').textContent = '再考一次';
+    } else {
+      $('result-title').textContent = '考试结束';
+      $('result-message').textContent = message;
+      $('retry-btn').textContent = '再刷一组';
+    }
 
     reviewFilter = 'all';
     renderReview();
@@ -895,20 +1273,46 @@
   // ===== 渲染题目 =====
   function renderQuestion() {
     const q = state.questions[state.currentIndex];
+    const paperSection = (state.paperMode && state.isExam)
+      ? state.paperSections[state.paperSectionIndex]
+      : null;
     const total = state.questions.length;
-    const idx = state.currentIndex + 1;
+    const globalIdx = state.currentIndex + 1;
+    const sectionIdx = paperSection ? state.currentIndex - paperSection.start + 1 : globalIdx;
+    const sectionTotal = paperSection ? paperSection.count : total;
 
-    // 更新进度
-    $('progress-text').textContent = `${idx} / ${total}`;
-    $('progress-fill').style.width = `${(idx / total) * 100}%`;
+    // 更新进度：套卷显示本节进度，普通模式显示整组进度
+    $('progress-text').textContent = paperSection
+      ? `第${state.paperSectionIndex + 1}节 ${sectionIdx}/${sectionTotal}`
+      : `${globalIdx} / ${total}`;
+    $('progress-fill').style.width = `${(sectionIdx / Math.max(sectionTotal, 1)) * 100}%`;
 
     // 考试模式：显示倒计时，隐藏跳过按钮
     $('exam-timer-bar').style.display = state.isExam ? 'flex' : 'none';
     $('skip-btn').style.display = state.isExam ? 'none' : '';
+    const timerLabel = $('exam-timer-label');
+    if (timerLabel) timerLabel.style.display = paperSection ? '' : 'none';
+
+    // 套卷分节信息条
+    const sectionBar = $('paper-section-bar');
+    if (sectionBar) {
+      if (paperSection) {
+        sectionBar.style.display = 'flex';
+        $('paper-section-badge').textContent =
+          `第 ${state.paperSectionIndex + 1} / ${state.paperSections.length} 节`;
+        $('paper-section-name').textContent = paperSection.name;
+        $('paper-section-hint').textContent =
+          `本节 ${paperSection.count} 题 · ${paperSection.minutes} 分钟`;
+      } else {
+        sectionBar.style.display = 'none';
+      }
+    }
 
     // 题目内容
     $('question-category').textContent = q.category || '选择题';
-    $('question-index').textContent = `第 ${idx} 题`;
+    $('question-index').textContent = paperSection
+      ? `第 ${globalIdx} / ${total} 题`
+      : `第 ${globalIdx} 题`;
     $('question-text').textContent = q.question;
 
     // 听力播放按钮：兼容 TTS 文本与音频 URL；DOM 缺失时动态兜底创建
@@ -991,7 +1395,16 @@
     $('prev-btn').disabled = state.currentIndex === 0;
     const nextBtn = $('next-btn');
 
-    if (state.isAssessment) {
+    if (paperSection) {
+      // 套卷：只能在本节内前后翻页；本节最后一题进入下一节/交卷
+      const atSectionEnd = state.currentIndex >= paperSection.end;
+      const isLastSection = state.paperSectionIndex >= state.paperSections.length - 1;
+      $('prev-btn').disabled = state.currentIndex <= paperSection.start;
+      nextBtn.disabled = false;
+      nextBtn.textContent = atSectionEnd
+        ? (isLastSection ? '交卷' : '进入下一节')
+        : '下一题';
+    } else if (state.isAssessment) {
       // 测评模式：选过即可翻页，最后一题显示"查看结果"
       nextBtn.disabled = !currentAnswer;
       nextBtn.textContent = state.currentIndex === total - 1 ? '查看结果' : '下一题';
@@ -1204,7 +1617,7 @@
     const detailBox = $('result-detail-box');
     if (scoreBox) scoreBox.style.display = '';
     if (detailBox) detailBox.style.display = '';
-    $('retry-btn').textContent = '再刷一组';
+    $('retry-btn').textContent = state.paperPracticeMode ? '再练一次' : '再刷一组';
     const total = state.questions.length;
     const correctCount = state.answers.filter(a => a && a.isRight).length;
     const wrongCount = total - correctCount;
@@ -1232,7 +1645,9 @@
       message = '别灰心，错题是最好的老师，多看解析再试一次！';
     }
     $('result-icon').textContent = icon;
-    $('result-title').textContent = rate >= 60 ? '刷题完成！' : '继续努力！';
+    $('result-title').textContent = state.paperPracticeMode
+      ? (rate >= 60 ? '套卷练习完成！' : '套卷练习结束')
+      : (rate >= 60 ? '刷题完成！' : '继续努力！');
     $('result-message').textContent = message;
 
     // 答题回顾（展示全部题目与详解，可筛选只看错题）
@@ -1345,10 +1760,18 @@
         const expHtml = q.explanation
           ? `<div class="review-explanation">💡 ${escapeHtml(String(q.explanation))}</div>`
           : '';
+        // 听力题在回顾里补一个重播按钮，方便复盘
+        const reviewAudio = getQuestionAudio(q);
+        const audioHtml = reviewAudio
+          ? `<button type="button" class="review-audio-btn" data-audio-index="${i}">
+               <span class="audio-icon">🔊</span><span class="audio-label">播放听力</span>
+             </button>`
+          : '';
 
         return `
           <div class="review-item ${statusCls}">
             <div class="review-question">${i + 1}. ${escapeHtml(String(q.question))}</div>
+            ${audioHtml}
             <div class="review-answer">
               ${isRight
                 ? `<span class="correct-answer">${statusText}</span>`
@@ -1358,6 +1781,18 @@
             ${expHtml}
           </div>`;
       }).join('');
+
+    // 回顾中的听力重播
+    reviewList.querySelectorAll('.review-audio-btn').forEach(btn => {
+      const idx = Number(btn.dataset.audioIndex);
+      const q = state.questions[idx];
+      const audioSrc = getQuestionAudio(q);
+      if (!audioSrc) return;
+      btn.addEventListener('click', () => {
+        if (audioSrc.type === 'url') playAudioUrl(audioSrc.src, btn);
+        else playAudio(audioSrc.src, btn);
+      });
+    });
 
     // 更新筛选条状态
     const chips = reviewSection.querySelectorAll('.review-filter');
@@ -1383,18 +1818,31 @@
         cleanupQuizSession();
         showPage('home');
         updateStatsUI();
+        checkStartButton();
       }
     });
 
     $('skip-btn').addEventListener('click', skipQuestion);
 
     $('prev-btn').addEventListener('click', () => {
+      if (state.paperMode && state.isExam) {
+        const section = state.paperSections[state.paperSectionIndex];
+        if (section && state.currentIndex > section.start) {
+          goToQuestion(state.currentIndex - 1);
+        }
+        return;
+      }
       if (state.currentIndex > 0) {
         goToQuestion(state.currentIndex - 1);
       }
     });
 
     $('next-btn').addEventListener('click', () => {
+      // 套卷：翻页限制在本节内，节点末尾进入下一节或交卷
+      if (state.paperMode && state.isExam) {
+        handlePaperNext();
+        return;
+      }
       if (state.currentIndex < state.questions.length - 1) {
         goToQuestion(state.currentIndex + 1);
       } else {
@@ -1409,6 +1857,14 @@
 
   function bindResultEvents() {
     $('retry-btn').addEventListener('click', () => {
+      if (state.paperMode) {
+        startPaperExam();
+        return;
+      }
+      if (state.paperPracticeMode) {
+        startPaperPractice();
+        return;
+      }
       startQuiz();
     });
 
@@ -1416,6 +1872,7 @@
       cleanupQuizSession();
       showPage('home');
       updateStatsUI();
+      checkStartButton();
     });
 
     // 答题回顾筛选：全部 / 只看错题
@@ -1430,8 +1887,14 @@
   // 清理本次答题会话状态
   function cleanupQuizSession() {
     stopExamTimer();
+    closePaperSectionModal();
     state.isExam = false;
     state.examTimeLeft = 0;
+    state.paperMode = false;
+    state.paperPracticeMode = false;
+    state.paperSections = [];
+    state.paperSectionIndex = 0;
+    state.paperSectionTimeLeft = 0;
     if (state.reviewMode) {
       state.reviewMode = false;
       delete window.QUIZ_DATA['__wrongbook_review__'];
@@ -2263,6 +2726,12 @@
       return;
     }
     const subject = window.QUIZ_DATA[state.selectedSubject];
+    // 套卷必须整卷按序作答，不提供分类筛选
+    if (isPaperBank(subject)) {
+      $('category-section').style.display = 'none';
+      state.activeCategory = null;
+      return;
+    }
     const categories = [...new Set(subject.questions.map(q => q.category).filter(Boolean))];
     const container = $('category-chips');
     container.innerHTML = '';
@@ -2665,7 +3134,7 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.6.1';
+  const APP_VERSION = '1.6.2';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -2930,6 +3399,12 @@
       .filter(m => m.style.display === 'flex');
     if (modals.length) {
       const top = modals[modals.length - 1];
+      // 套卷分节提示不允许直接关闭：返回键等同于进入下一节
+      if (top.id === 'paper-section-modal') {
+        const next = state.paperPendingSection;
+        if (next !== null && next !== undefined) startPaperSection(next);
+        return true;
+      }
       top.style.display = 'none';
       if (top.id === 'update-modal') setUpdateModalBusy(false);
       return true;
@@ -2964,11 +3439,27 @@
           showToast('已保存测试进度，可随时继续');
           return;
         }
-        if (window.confirm('确定要退出本次刷题吗？')) showPage('home');
+        // 考试（含套卷）：返回键等同于交卷并查看结果
+        if (state.isExam) {
+          if (!window.confirm('确定要交卷并退出考试吗？')) return;
+          submitExam();
+          return;
+        }
+        if (window.confirm('确定要退出本次刷题吗？进度将不会保存。')) {
+          cleanupQuizSession();
+          showPage('home');
+          checkStartButton();
+        }
         return;
       }
       // 3. 结果页 → 回首页
-      if (currentPage === 'result') { showPage('home'); return; }
+      if (currentPage === 'result') {
+        cleanupQuizSession();
+        showPage('home');
+        updateStatsUI();
+        checkStartButton();
+        return;
+      }
       // 4. 首页：history 有记录就后退，否则退出应用
       if (data && data.canGoBack) { window.history.back(); return; }
       cap.nativePromise('App', 'exitApp').catch(() => {});
