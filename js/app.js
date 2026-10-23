@@ -543,6 +543,16 @@
     { name: '2027年下半年 中小学教师资格面试', date: '2027-12-04', endDate: '2027-12-05', confirmed: false }
   ];
 
+  // 统一考试日期展示格式：单日「2027年03月06日」，同期跨天「2026年12月05日 至 06日」，跨月跨年则两侧都写全
+  function formatExamDate(exam) {
+    const cn = (s) => `${s.slice(0, 4)}年${s.slice(5, 7)}月${s.slice(8, 10)}日`;
+    if (!exam.endDate || exam.date === exam.endDate) return cn(exam.date);
+    const sameMonth = exam.date.slice(0, 7) === exam.endDate.slice(0, 7);
+    return sameMonth
+      ? `${cn(exam.date)} 至 ${exam.endDate.slice(5, 7)}月${exam.endDate.slice(8, 10)}日`
+      : `${cn(exam.date)} 至 ${cn(exam.endDate)}`;
+  }
+
   function renderExamCountdown() {
     const container = $('exam-countdown-list');
     if (!container) return;
@@ -562,14 +572,13 @@
       const examDate = new Date(exam.date + 'T00:00:00');
       const diffDays = Math.ceil((examDate - now) / 86400000);
       const tag = exam.confirmed ? '' : '<span class="countdown-tag">预计</span>';
-      const dateStr = exam.date === exam.endDate
-        ? exam.date.replace(/-/g, '年').replace(/(\d{4})年(\d{2})月/, '$1年$2月').replace('月', '月') + '日'
-        : `${exam.date} 至 ${exam.endDate}`.replace(/-/g, '/');
       return `
         <div class="countdown-item">
           <div class="countdown-name">${tag}${escapeHtml(exam.name)}</div>
-          <div class="countdown-date">${dateStr}</div>
-          <div class="countdown-days">还有 <strong>${diffDays}</strong> 天</div>
+          <div class="countdown-meta">
+            <div class="countdown-date">${formatExamDate(exam)}</div>
+            <div class="countdown-days">还有 <strong>${diffDays}</strong> 天</div>
+          </div>
         </div>`;
     }).join('');
   }
@@ -1465,6 +1474,7 @@
       ? `第${state.paperSectionIndex + 1}节 ${sectionIdx}/${sectionTotal}`
       : `${globalIdx} / ${total}`;
     $('progress-fill').style.width = `${(sectionIdx / Math.max(sectionTotal, 1)) * 100}%`;
+    updateNavCount();
 
     // 考试模式：显示倒计时，隐藏跳过按钮
     $('exam-timer-bar').style.display = state.isExam ? 'flex' : 'none';
@@ -1794,6 +1804,186 @@
     renderQuestion();
   }
 
+  // ===== 题目总览（按题型分组的题号盘）=====
+  // 套卷常有 30+ 题、四五种题型，只有「上一题/下一题」时想回头检查选择题得一路点回去。
+  // 这里给一个号盘：按题型（套卷考试时按节）分组，标注已答/未答/当前/收藏，点题号直达。
+  function isAnsweredAt(i) {
+    const a = state.answers[i];
+    if (!a) return false;
+    if (a.subjective) return a.selected === -2 || a.subjectiveViewed === true;
+    return typeof a.selected === 'number' && a.selected >= 0;
+  }
+
+  // 套卷考试模式按「节」分组（每节独立计时，跨节跳题会破坏时限，所以上下文的节锁住）；
+  // 其余模式（练习、套卷练习、普通考试）按题目的 category 分组，可自由跳转。
+  function buildNavGroups() {
+    const bySection = !!(state.paperMode && state.isExam && state.paperSections.length);
+    const groups = [];
+    const indexByKey = new Map();
+
+    function pushGroup(label, sub) {
+      const g = { label: label, sub: sub || '', items: [] };
+      groups.push(g);
+      return g;
+    }
+
+    state.questions.forEach(function (q, i) {
+      let g;
+      if (bySection) {
+        const sec = state.paperSections.find(s => i >= s.start && i <= s.end)
+          || state.paperSections[state.paperSections.length - 1];
+        const key = sec ? sec.name : '全部';
+        g = indexByKey.get(key);
+        if (!g) {
+          g = pushGroup(key, sec ? `第 ${sec.start + 1}–${sec.end + 1} 题` : '');
+          indexByKey.set(key, g);
+        }
+      } else {
+        const key = q.category || '未分类';
+        g = indexByKey.get(key);
+        if (!g) {
+          g = pushGroup(key, '');
+          indexByKey.set(key, g);
+        }
+      }
+      g.items.push(i);
+    });
+
+    const curSection = bySection ? state.paperSections[state.paperSectionIndex] : null;
+    groups.forEach(function (g) {
+      g.locked = bySection && curSection
+        ? !(g.items[0] >= curSection.start && g.items[0] <= curSection.end)
+        : false;
+      g.answered = g.items.filter(isAnsweredAt).length;
+    });
+    return groups;
+  }
+
+  function navCellHtml(i, opts) {
+    const q = state.questions[i];
+    const answered = isAnsweredAt(i);
+    const current = !opts.review && i === state.currentIndex;
+    const locked = !!(opts.locked);
+    const fav = !opts.review && isFavorite(q);
+    const cls = ['nav-cell'];
+    if (answered) cls.push('answered');
+    if (current) cls.push('current');
+    if (locked) cls.push('locked');
+    if (fav) cls.push('fav');
+    const attrs = ['class="' + cls.join(' ') + '"', 'data-q-index="' + i + '"'];
+    if (fav) attrs.push('title="已收藏"');
+    if (locked) attrs.push('title="本卷按节计时，此节不可跳转"');
+    return '<button type="button" ' + attrs.join(' ') + '>' + (i + 1) + '</button>';
+  }
+
+  function navGroupsHtml(groups, opts) {
+    opts = opts || {};
+    return groups.map(function (g) {
+      return '<div class="nav-group' + (g.locked ? ' is-locked' : '') + '">'
+        + '<div class="nav-group-head">'
+        + '<span class="nav-group-name">' + escapeHtml(g.label) + '</span>'
+        + '<span class="nav-group-meta">'
+        + (g.sub ? escapeHtml(g.sub) + ' · ' : '')
+        + g.items.length + ' 题 · 已答 ' + g.answered
+        + (g.locked ? ' · 已锁定' : '') + '</span></div>'
+        + '<div class="nav-grid">' + g.items.map(i => navCellHtml(i, {
+          review: opts.review, locked: g.locked
+        })).join('') + '</div></div>';
+    }).join('');
+  }
+
+  function updateNavCount() {
+    const el = $('question-nav-count');
+    if (!el) return;
+    const done = state.answers.filter((a, i) => isAnsweredAt(i)).length;
+    el.textContent = done + '/' + state.questions.length;
+  }
+
+  function openQuestionNav() {
+    if (!state.questions.length) return;
+    const groups = buildNavGroups();
+    const bySection = !!(state.paperMode && state.isExam && state.paperSections.length);
+    const done = state.answers.filter((a, i) => isAnsweredAt(i)).length;
+    const blank = state.questions.length - done;
+
+    $('nav-summary').textContent = '共 ' + state.questions.length + ' 题 · 已答 ' + done
+      + ' · 未答 ' + blank;
+    $('nav-groups').innerHTML = navGroupsHtml(groups);
+    const note = $('nav-note');
+    if (bySection) {
+      note.style.display = 'block';
+      note.textContent = '套卷考试每节单独计时，只能在本节内自由跳转；已结束的节可交卷后在「答题回顾」里查看。';
+    } else {
+      note.style.display = 'none';
+    }
+    $('question-nav-modal').style.display = 'flex';
+  }
+
+  function closeQuestionNav() {
+    const m = $('question-nav-modal');
+    if (m) m.style.display = 'none';
+  }
+
+  function bindQuestionNav() {
+    const btn = $('question-nav-btn');
+    if (btn && !btn.dataset.bound) {
+      btn.dataset.bound = '1';
+      btn.onclick = openQuestionNav;
+    }
+    const close = $('nav-close-btn');
+    if (close && !close.dataset.bound) {
+      close.dataset.bound = '1';
+      close.onclick = closeQuestionNav;
+    }
+    const overlay = $('question-nav-modal');
+    if (overlay && !overlay.dataset.bound) {
+      overlay.dataset.bound = '1';
+      overlay.onclick = function (e) { if (e.target === overlay) closeQuestionNav(); };
+    }
+    const groups = $('nav-groups');
+    if (groups && !groups.dataset.bound) {
+      groups.dataset.bound = '1';
+      groups.onclick = function (e) {
+        const cell = e.target.closest('.nav-cell');
+        if (!cell) return;
+        if (cell.classList.contains('locked')) {
+          showToast('本卷按节计时，这一节当前不可跳转');
+          return;
+        }
+        const idx = parseInt(cell.dataset.qIndex, 10);
+        if (Number.isInteger(idx)) {
+          closeQuestionNav();
+          goToQuestion(idx);
+        }
+      };
+    }
+  }
+
+  // 交卷后回顾页同款号盘：点击滚动定位到那道题
+  function renderReviewNav() {
+    const box = $('review-nav');
+    if (!box) return;
+    if (state.questions.length < 6) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'block';
+    box.innerHTML = navGroupsHtml(buildNavGroups(), { review: true });
+    if (!box.dataset.bound) {
+      box.dataset.bound = '1';
+      box.onclick = function (e) {
+        const cell = e.target.closest('.nav-cell');
+        if (!cell) return;
+        const idx = parseInt(cell.dataset.qIndex, 10);
+        if (!Number.isInteger(idx)) return;
+        // 「只看错题」下正确题不在列表里，先切回全部再定位
+        if (reviewFilter !== 'all') setReviewFilter('all');
+        const target = $('review-list').querySelector('[data-q-index="' + idx + '"]');
+        if (!target) { showToast('没找到第 ' + (idx + 1) + ' 题'); return; }
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        target.classList.add('nav-flash');
+        setTimeout(() => target.classList.remove('nav-flash'), 1200);
+      };
+    }
+  }
+
   // ===== 跳过 =====
   function skipQuestion() {
     const q = state.questions[state.currentIndex];
@@ -1825,6 +2015,8 @@
     const detailBox = $('result-detail-box');
     if (scoreBox) scoreBox.style.display = '';
     if (detailBox) detailBox.style.display = '';
+    const assessDetail = $('assessment-detail');
+    if (assessDetail) { assessDetail.style.display = 'none'; assessDetail.innerHTML = ''; }
     $('retry-btn').textContent = state.paperPracticeMode ? '再练一次' : '再刷一组';
     const total = state.questions.length;
     // 分离客观题和主观题统计
@@ -1926,9 +2118,43 @@
     $('result-title').textContent = hit.title || hit.key;
     $('result-message').textContent =
       `已作答 ${answeredCount2}/${state.questions.length} 题 · 结果类型：${hit.key}\n\n${hit.description || ''}`;
+    renderAssessmentDetail(hit);
     $('retry-btn').textContent = '重新测试';
 
     showPage('result');
+  }
+
+  // 测评结果详情：渲染题库里可选的分析字段（MBTI 的 traits/strengths/careers 等）
+  const ASSESSMENT_DETAIL_FIELDS = [
+    ['traits', '核心特质', 'chips'],
+    ['strengths', '你的优势', 'chips'],
+    ['blindspots', '需要注意', 'chips'],
+    ['workstyle', '工作风格', 'text'],
+    ['careers', '适合方向', 'chips'],
+    ['relationships', '人际关系', 'text'],
+    ['growth', '成长建议', 'text'],
+    ['stress', '压力应对', 'text']
+  ];
+
+  function renderAssessmentDetail(hit) {
+    const box = $('assessment-detail');
+    if (!box) return;
+    let html = '';
+    ASSESSMENT_DETAIL_FIELDS.forEach(function (field) {
+      const value = hit[field[0]];
+      if (!value) return;
+      if (field[2] === 'chips') {
+        if (!Array.isArray(value) || !value.length) return;
+        html += '<div class="assess-block"><div class="assess-label">' + escapeHtml(field[1]) + '</div><div class="assess-chips">' +
+          value.map(v => '<span class="assess-chip">' + escapeHtml(String(v)) + '</span>').join('') + '</div></div>';
+      } else {
+        if (typeof value !== 'string' || !value.trim()) return;
+        html += '<div class="assess-block"><div class="assess-label">' + escapeHtml(field[1]) +
+          '</div><div class="assess-text">' + escapeHtml(value) + '</div></div>';
+      }
+    });
+    box.innerHTML = html;
+    box.style.display = html ? 'block' : 'none';
   }
 
   // 答题回顾筛选：'all' = 全部题目，'wrong' = 只看错题
@@ -1970,7 +2196,7 @@
             ? `<div class="review-explanation">💡 ${escapeHtml(String(q.explanation))}</div>`
             : '';
           return `
-            <div class="review-item subjective ${statusCls}">
+            <div class="review-item subjective ${statusCls}" data-q-index="${i}">
               <div class="review-question">${i + 1}. [主观题] ${escapeHtml(String(q.question))}</div>
               <div class="review-answer">
                 <span class="${isRight ? 'correct-answer' : 'wrong-answer'}">${statusText}</span>
@@ -2010,7 +2236,7 @@
           : '';
 
         return `
-          <div class="review-item ${statusCls}">
+          <div class="review-item ${statusCls}" data-q-index="${i}">
             <div class="review-question">${i + 1}. ${escapeHtml(String(q.question))}</div>
             ${audioHtml}
             <div class="review-answer">
@@ -2045,6 +2271,14 @@
         c.textContent = `全部（${totalCount}）`;
       }
     });
+
+    renderReviewNav();
+  }
+
+  // 号盘跳转时可能要先切换筛选，保证目标题一定在 DOM 里
+  function setReviewFilter(name) {
+    reviewFilter = name;
+    renderReview();
   }
 
   // ===== 事件绑定 =====
@@ -3387,7 +3621,9 @@
   // 与泡泡课表同一套方案：查 GitHub Release -> 比版本 -> 下载 -> 拉起安装。
   // App 内（Capacitor WebView）走原生插件（DownloadManager 下载 + 自动拉起安装器）；
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
-  const APP_VERSION = '1.7.0';
+  // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
+  // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
+  const APP_VERSION = '1.7.2';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -3943,6 +4179,7 @@
     typewriterTitle();
     initSettings();
     bindQuizEvents();
+    bindQuestionNav();
     bindResultEvents();
     bindImportEvents();
     bindUxEvents();

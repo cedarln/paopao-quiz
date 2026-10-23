@@ -1,0 +1,145 @@
+#!/usr/bin/env node
+/**
+ * build-www.js —— 生成 Capacitor webDir（www/）
+ *
+ * 背景：过去 www/ 是「把仓库根整个 cp 过来」产生的，于是 keystore/、screenshots/、
+ * samples/、README、package-lock、甚至 www/www 套娃全被 `cap sync` 一路搬进
+ * APK 的 assets/public/。v1.7.1 实测：签名密钥 paopao-quiz.jks 被打进了已发布的
+ * APK（仓库是 PUBLIC 的），assets 里还白放着 17M 没人读的 quizzes/。
+ *
+ * 所以这里只认一张白名单：index.html 真正引用的东西 + manifest + 音频。
+ * 不在名单里的一律不进包。要新增静态资源，请显式往 FILES / DIRS 里加一行，
+ * 不要「顺手全拷」。
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..');
+const OUT = path.join(ROOT, 'www');
+
+// 顶层单文件
+const FILES = ['index.html', 'manifest.json'];
+
+// 顶层目录（整棵递归拷贝）
+// js/     —— app.js + data/ 内置题库
+// css/    —— style.css
+// audio/  —— 听力 m4a，app.js 按 `audio/<bankKey>/<id>.m4a` 相对 web 根取，必须离线内置
+const DIRS = ['js', 'css', 'audio'];
+
+// 永远不进包，即使被误加进 DIRS 也要拦住
+const DENY = new Set([
+  'keystore', 'node_modules', 'screenshots', 'samples', 'tmp-build',
+  'quizzes', 'android', 'data', '.git', 'tools'
+]);
+
+function rmrf(target) {
+  if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
+}
+
+function copyInto(src, destDir) {
+  const st = fs.statSync(src);
+  if (st.isDirectory()) {
+    fs.mkdirSync(destDir, { recursive: true });
+    for (const entry of fs.readdirSync(src)) {
+      if (entry === '.DS_Store' || entry.startsWith('._')) continue;
+      copyInto(path.join(src, entry), path.join(destDir, entry));
+    }
+  } else {
+    fs.mkdirSync(path.dirname(destDir), { recursive: true });
+    fs.copyFileSync(src, destDir);
+  }
+}
+
+function sizeOf(target) {
+  const st = fs.statSync(target);
+  if (st.isFile()) return st.size;
+  return fs.readdirSync(target).reduce((n, e) => n + sizeOf(path.join(target, e)), 0);
+}
+
+function human(bytes) {
+  return bytes > 1048576
+    ? (bytes / 1048576).toFixed(2) + ' MB'
+    : (bytes / 1024).toFixed(1) + ' KB';
+}
+
+// 版本号三处对齐检查：app.js 的 APP_VERSION 落后于 build.gradle 会造成
+// 「发现新版本」弹窗永远消不掉（v1.7.1 就这么翻过一次车）。
+function checkVersions() {
+  const read = (p) => fs.readFileSync(path.join(ROOT, p), 'utf8');
+  const appJs = read('js/app.js').match(/const APP_VERSION\s*=\s*'([^']+)'/);
+  const gradle = read('android/app/build.gradle').match(/versionName\s+"([^"]+)"/);
+  const pkg = JSON.parse(read('package.json'));
+
+  const found = {
+    'js/app.js APP_VERSION': appJs && appJs[1],
+    'build.gradle versionName': gradle && gradle[1],
+    'package.json version': pkg.version
+  };
+  const values = Object.values(found).filter(Boolean);
+  const consistent = new Set(values).size === 1 && values.length === 3;
+
+  if (!consistent) {
+    console.error('❌ 版本号三处不一致，发布前必须对齐：');
+    for (const [k, v] of Object.entries(found)) console.error(`   ${k.padEnd(28)} ${v || '(没找到)'}`);
+    process.exitCode = 1;
+  } else {
+    console.log(`版本号一致：v${values[0]}`);
+  }
+}
+
+function main() {
+  checkVersions();
+
+  // 只清 www 自己，绝不碰仓库其它目录
+  rmrf(OUT);
+  fs.mkdirSync(OUT, { recursive: true });
+
+  const report = [];
+
+  for (const f of FILES) {
+    const src = path.join(ROOT, f);
+    if (!fs.existsSync(src)) {
+      console.error(`❌ 缺少入口文件：${f}`);
+      process.exitCode = 1;
+      continue;
+    }
+    fs.copyFileSync(src, path.join(OUT, f));
+    report.push([f, sizeOf(src)]);
+  }
+
+  for (const d of DIRS) {
+    if (DENY.has(d)) {
+      console.error(`❌ ${d}/ 在禁止打包名单里，检查 DIRS 配置`);
+      process.exitCode = 1;
+      continue;
+    }
+    const src = path.join(ROOT, d);
+    if (!fs.existsSync(src)) {
+      console.error(`❌ 缺少资源目录：${d}/`);
+      process.exitCode = 1;
+      continue;
+    }
+    copyInto(src, path.join(OUT, d));
+    report.push([d + '/', sizeOf(src)]);
+  }
+
+  // 自检：www 里不许出现被禁止的目录，也不许出现 www/www
+  const leaked = [...DENY].filter(name => fs.existsSync(path.join(OUT, name)));
+  if (fs.existsSync(path.join(OUT, 'www'))) leaked.push('www');
+  if (leaked.length) {
+    console.error('❌ 产物中混入了不该打包的路径：' + leaked.join(', '));
+    process.exitCode = 1;
+  }
+
+  console.log('www/ 构建完成：');
+  let total = 0;
+  for (const [name, bytes] of report) {
+    console.log(`  ${name.padEnd(16)} ${human(bytes)}`);
+    total += bytes;
+  }
+  console.log(`  ${'合计'.padEnd(15)} ${human(total)}`);
+  console.log('\n下一步：npx cap sync android（sync 不清理旧 assets，见下）');
+}
+
+main();
