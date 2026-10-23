@@ -4416,48 +4416,66 @@
     return { cls: 'new', label: '未加载' };
   }
 
+  // 列表状态：题库名普遍很长（「思想政治学科知识与教学能力 模拟卷 第1回」这种），
+  // 单行 + 跑马灯在手机上只能看到个头，所以改成折行两行后省略 + 搜索 + 状态筛选。
+  let portalAllItems = [];
+  let portalFilter = 'all';
+  const PORTAL_STATUS_ORDER = { new: 0, update: 1, loaded: 2 };
+
+  function portalItemVisible(item, st, query, ignoreFilter) {
+    if (!ignoreFilter) {
+      if (portalFilter === 'todo' && st.cls === 'loaded') return false;
+      if (portalFilter === 'loaded' && st.cls !== 'loaded') return false;
+    }
+    if (!query) return true;
+    return (item.displayName + ' ' + item.name + ' ' + (item.bankKey || '')).toLowerCase().includes(query);
+  }
+
+  // chip 上的计数即筛选结果，省掉单独一行「共 N 个」的说明文字
+  function setPortalChipCounts(todo, loaded) {
+    const t = $('portal-n-todo');
+    const l = $('portal-n-loaded');
+    if (t) t.textContent = todo;
+    if (l) l.textContent = loaded;
+  }
+
   function renderPortalList(items) {
     const list = $('portal-list');
     const markers = getPortalMarkers();
+    portalAllItems = items;
     if (!items.length) {
       list.innerHTML = '<div class="portal-empty">仓库的 quizzes/ 目录还没有题库文件，快去发布第一个吧。</div>';
+      setPortalChipCounts(0, 0);
       updatePortalBadge(0);
       return;
     }
-    let pending = 0;
-    list.innerHTML = items.map((item, idx) => {
-      const st = portalItemStatus(item, markers);
-      if (st.cls !== 'loaded') pending++;
-      const size = item.size ? formatSize(item.size) : '';
-      return `
-        <div class="portal-item" data-idx="${idx}" data-name="${escapeHtml(item.name)}">
-          <div class="portal-item-icon">📄</div>
-          <div class="portal-item-info">
-            <div class="portal-item-name"><span class="name-text">${escapeHtml(item.displayName)}</span></div>
-            <div class="portal-item-meta">${size || '&nbsp;'}</div>
-          </div>
-          <span class="portal-status ${st.cls}">${st.label}</span>
-        </div>`;
-    }).join('');
-    updatePortalBadge(pending);
-
-    // 题库名超宽时启用跑马灯滚动（速度约 22px/s，两端停留）
-    requestAnimationFrame(() => {
-      list.querySelectorAll('.portal-item-name').forEach(el => {
-        const text = el.querySelector('.name-text');
-        if (!text) return;
-        const overflow = text.scrollWidth - el.clientWidth;
-        if (overflow > 2) {
-          el.classList.add('scrolling');
-          el.style.setProperty('--marquee-shift', (overflow + 8) + 'px');
-          el.style.setProperty('--marquee-dur', Math.max(4, Math.round((overflow + 8) / 22 * 2)) + 's');
-        }
-      });
+    const searchEl = $('portal-search');
+    const query = ((searchEl && searchEl.value) || '').trim().toLowerCase();
+    // 先按搜索词收窄，再按状态筛选；chip 上的数字跟着搜索词变，方便判断「搜到了但都装过了」
+    const matched = items.map(item => ({ item, st: portalItemStatus(item, markers) }))
+      .filter(d => portalItemVisible(d.item, d.st, query, true));
+    const todo = matched.filter(d => d.st.cls !== 'loaded').length;
+    const shown = matched.filter(d => portalItemVisible(d.item, d.st, query, false));
+    shown.sort((a, b) => {
+      const byStatus = PORTAL_STATUS_ORDER[a.st.cls] - PORTAL_STATUS_ORDER[b.st.cls];
+      if (byStatus) return byStatus;
+      return String(a.item.displayName).localeCompare(String(b.item.displayName), 'zh-Hans-CN', { numeric: true });
     });
+    setPortalChipCounts(todo, matched.length - todo);
+    updatePortalBadge(todo);
 
+    list.innerHTML = shown.length ? shown.map(({ item, st }) => `
+        <div class="portal-item ${st.cls}" data-file="${escapeHtml(item.name)}">
+          <div class="portal-item-name">${escapeHtml(item.displayName)}</div>
+          <div class="portal-item-foot">
+            <div class="portal-item-meta">${item.size ? formatSize(item.size) : ''}${item.bankKey && item.bankKey !== item.displayName ? `<span class="portal-item-key">${escapeHtml(item.bankKey)}</span>` : ''}</div>
+            <span class="portal-status ${st.cls}">${st.label}</span>
+          </div>
+        </div>`).join('')
+      : '<div class="portal-empty">没有匹配的题库。换个关键词（如 vocab / paper / 词汇 / 综合素质），或点上面「全部」。</div>';
     list.querySelectorAll('.portal-item').forEach(el => {
       el.addEventListener('click', () => {
-        const item = items[parseInt(el.dataset.idx, 10)];
+        const item = portalAllItems.find(it => it.name === el.dataset.file);
         if (item) loadPortalBank(item);
       });
     });
@@ -4481,13 +4499,15 @@
           .map(f => {
             const base = f.name.replace(/\.json$/i, '');
             // 允许用「展示名~原文件名.json」的方式给题库起好看的展示名
-            const displayName = base.includes('~') ? base.split('~')[0] : base;
-            return { name: f.name, displayName, size: f.size, sha: f.sha, downloadUrl: f.download_url };
+            const hasKey = base.includes('~');
+            const displayName = hasKey ? base.split('~')[0] : base;
+            const bankKey = hasKey ? base.split('~').slice(1).join('~') : base;
+            return { name: f.name, displayName, bankKey, size: f.size, sha: f.sha, downloadUrl: f.download_url };
           });
         renderPortalList(items);
       })
       .catch(err => {
-        list.innerHTML = '<div class="portal-empty">加载失败：' + escapeHtml(err.message) + '<br>请检查网络后点「刷新列表」重试</div>';
+        list.innerHTML = '<div class="portal-empty">加载失败：' + escapeHtml(err.message) + '<br>请检查网络后点右上角「刷新」重试</div>';
       });
   }
 
@@ -4518,6 +4538,13 @@
 
   function openPortalModal() {
     $('portal-modal').style.display = 'flex';
+    // 每次打开回到「全部 + 空搜索」：留着上次的关键词会让人以为仓库题库变少了
+    const searchEl = $('portal-search');
+    if (searchEl) searchEl.value = '';
+    portalFilter = 'all';
+    document.querySelectorAll('#portal-filters .portal-chip').forEach(chip => {
+      chip.classList.toggle('active', chip.dataset.filter === 'all');
+    });
     refreshAudioCacheBar();
     loadPortalList(false);
   }
@@ -4530,6 +4557,15 @@
     $('portal-btn').addEventListener('click', openPortalModal);
     $('portal-close-btn').addEventListener('click', closePortalModal);
     $('portal-refresh-btn').addEventListener('click', () => loadPortalList(false));
+    const searchEl = $('portal-search');
+    if (searchEl) searchEl.addEventListener('input', () => renderPortalList(portalAllItems));
+    document.querySelectorAll('#portal-filters .portal-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        portalFilter = chip.dataset.filter || 'all';
+        document.querySelectorAll('#portal-filters .portal-chip').forEach(c => c.classList.toggle('active', c === chip));
+        renderPortalList(portalAllItems);
+      });
+    });
     $('portal-modal').addEventListener('click', (e) => {
       if (e.target.id === 'portal-modal') closePortalModal();
     });

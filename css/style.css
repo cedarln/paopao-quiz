@@ -2750,21 +2750,54 @@ body.custom-bg::before {
   position: relative;
 }
 
-/* 传送门顶部的听力音频缓存条（v1.8.0：音频不再打包，按需下载 + 本地缓存） */
+/* 传送门弹窗：列表是主角，头部说明和工具条尽量压扁，手机上能多露两三个题库 */
+.portal-modal-content {
+  max-height: 86vh;
+}
+
+.portal-modal-content .recycle-modal-header {
+  margin-bottom: 4px;
+}
+
+.portal-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.portal-refresh {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.portal-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+/* 听力音频缓存条（v1.8.0：音频不再打包，按需下载 + 本地缓存） */
 .portal-audio-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 12px;
-  padding: 8px 12px;
+  padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
 }
 
 .audio-cache-note {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   line-height: 1.5;
 }
@@ -2788,23 +2821,93 @@ body.custom-bg::before {
 }
 
 .portal-list {
-  max-height: 320px;
+  flex: 1;
+  min-height: 120px;
+  max-height: none;
   overflow-y: auto;
-  margin: 12px 0;
+  -webkit-overflow-scrolling: touch;
+  margin: 8px 0 12px;
+  overscroll-behavior: contain;
+}
+
+/* 搜索 + 状态筛选：仓库有 26 个题库，长名字光靠滚动找不到 */
+.portal-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.portal-search {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.portal-search:focus {
+  border-color: var(--primary);
+}
+
+.portal-filters {
+  display: flex;
+  gap: 6px;
+}
+
+.portal-chip {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.portal-chip-n {
+  min-width: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.portal-chip.active {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.portal-chip.active .portal-chip-n {
+  color: rgba(255, 255, 255, 0.88);
 }
 
 .portal-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
+  padding: 11px 12px;
   border: 1px solid var(--border);
+  border-left: 3px solid var(--border);
   border-radius: 10px;
   margin-bottom: 8px;
   cursor: pointer;
   transition: all 0.2s;
   background: var(--card-bg);
 }
+
+/* 左边框着色 = 状态，滚动列表里不用逐个读徽章 */
+.portal-item.new { border-left-color: #06b6d4; }
+.portal-item.update { border-left-color: #f59e0b; }
+.portal-item.loaded { border-left-color: var(--border); opacity: 0.75; }
+.portal-item.loaded:hover { opacity: 1; }
 
 .portal-item:hover {
   border-color: var(--primary);
@@ -2816,47 +2919,48 @@ body.custom-bg::before {
   transform: scale(0.98);
 }
 
-.portal-item-icon {
-  font-size: 24px;
-  flex-shrink: 0;
-}
-
-.portal-item-info {
-  flex: 1;
-  min-width: 0;
-}
-
+/* 长名字优先：题库名独占整行（最多两行，超出省略），第二行才放体积 / key / 状态，
+   状态用左边框着色代替图标，既省横向空间又能一眼扫出「未加载 / 有更新」 */
 .portal-item-name {
   font-size: 15px;
   font-weight: 600;
+  line-height: 1.4;
   color: var(--text-primary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: nowrap;
+  word-break: break-word;
 }
 
-/* 题库名超出宽度时滚动显示（跑马灯），由 JS 检测溢出后添加 .scrolling */
-.portal-item-name .name-text {
-  display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  vertical-align: bottom;
-}
-
-.portal-item-name.scrolling .name-text {
-  max-width: none;
-  animation: portal-marquee var(--marquee-dur, 8s) linear infinite alternate;
-}
-
-@keyframes portal-marquee {
-  0%, 12% { transform: translateX(0); }
-  88%, 100% { transform: translateX(calc(-1 * var(--marquee-shift, 40px))); }
+.portal-item-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .portal-item-meta {
-  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 11px;
   color: var(--text-muted);
-  margin-top: 2px;
+}
+
+.portal-item-key {
+  padding: 1px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .portal-status {
