@@ -2750,6 +2750,43 @@ body.custom-bg::before {
   position: relative;
 }
 
+/* 传送门顶部的听力音频缓存条（v1.8.0：音频不再打包，按需下载 + 本地缓存） */
+.portal-audio-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.audio-cache-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.audio-cache-clear {
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--error);
+  background: transparent;
+  border: 1px solid var(--error);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.audio-cache-clear:hover {
+  background: var(--error);
+  color: #fff;
+}
+
 .portal-list {
   max-height: 320px;
   overflow-y: auto;
