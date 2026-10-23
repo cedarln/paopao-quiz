@@ -654,6 +654,10 @@
     currentPage = pageName;
     Object.values(pages).forEach(p => p.classList.remove('active'));
     pages[pageName].classList.add('active');
+    // 结果页被普通刷题、考试、套卷、测评、历史结果五个入口复用。
+    // 测评专用的分析区在进页时统一清空，谁要显示就在 showPage('result') 之后自己填，
+    // 免得新增一个复用点就漏一次（漏掉的后果是上个测评的分析区残留在考试结果页上）。
+    if (pageName === 'result') renderAssessmentDetail(null);
     window.scrollTo(0, 0);
   }
 
@@ -1019,6 +1023,12 @@
       `测试完成于 ${date.toLocaleDateString()} ${date.toLocaleTimeString().slice(0, 5)} · 作答 ${saved.answeredCount}/${saved.total} 题\n\n${saved.description || ''}`;
     $('retry-btn').textContent = '重新测试';
     showPage('result');
+
+    // 历史结果只存了 key/icon/title/description，八个分析字段回到题库里取。
+    // 题库可能已被删除或换版，取不到就干净地留空，不显示错的内容。
+    const bank = window.QUIZ_DATA[key] || {};
+    const hit = (bank.results || []).find(r => r.key === saved.key);
+    renderAssessmentDetail(hit || null);
   }
 
   // ===== 开始刷题 =====
@@ -2015,8 +2025,7 @@
     const detailBox = $('result-detail-box');
     if (scoreBox) scoreBox.style.display = '';
     if (detailBox) detailBox.style.display = '';
-    const assessDetail = $('assessment-detail');
-    if (assessDetail) { assessDetail.style.display = 'none'; assessDetail.innerHTML = ''; }
+    // 测评分析区不用在这里清：showPage('result') 进页时统一清空
     $('retry-btn').textContent = state.paperPracticeMode ? '再练一次' : '再刷一组';
     const total = state.questions.length;
     // 分离客观题和主观题统计
@@ -2118,10 +2127,11 @@
     $('result-title').textContent = hit.title || hit.key;
     $('result-message').textContent =
       `已作答 ${answeredCount2}/${state.questions.length} 题 · 结果类型：${hit.key}\n\n${hit.description || ''}`;
-    renderAssessmentDetail(hit);
     $('retry-btn').textContent = '重新测试';
 
     showPage('result');
+    // showPage 进页会清空分析区，所以必须在其之后填
+    renderAssessmentDetail(hit);
   }
 
   // 测评结果详情：渲染题库里可选的分析字段（MBTI 的 traits/strengths/careers 等）
@@ -2139,6 +2149,12 @@
   function renderAssessmentDetail(hit) {
     const box = $('assessment-detail');
     if (!box) return;
+    // 传 null / 空对象 = 清空并隐藏（非测评路径与进页时的默认状态都走这条）
+    if (!hit || typeof hit !== 'object') {
+      box.innerHTML = '';
+      box.style.display = 'none';
+      return;
+    }
     let html = '';
     ASSESSMENT_DETAIL_FIELDS.forEach(function (field) {
       const value = hit[field[0]];
