@@ -4,13 +4,13 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.7.2-orange)
+![Version](https://img.shields.io/badge/version-1.8.0-orange)
 
 ---
 
 ## 📦 Releases
 
-### v1.8.0（开发中）
+### v1.8.0（2026-10-23）
 
 - 🧷 **内置题库改为单一来源生成**：`tools/merge-banks.js` 原先把题库字段手拼成 JS 字符串，只认识 `id/category/question/options/answer/subjective/answerText/explanation/audioUrl`，其余（`optionResults`、`dimensions`、`results` 的分析字段、`audio` 文本）会被静默丢掉，所以测评题库根本不能走它内置。现在按 JSON 原样序列化 `window.QUIZ_DATA[key] = {…}`，字段一个不丢，并在写完后用独立 vm 上下文把生成的文件跑一遍、逐题比对源数据，不通过就非零退出
 - 🚧 **加了三道护栏**（都是这次踩过的坑）：镜像文件名按 key 反查已有文件，不再另写一个「同 key 不同文件名」的副本造成用户侧题库分裂；题量比现有镜像变少时拒绝写入（曾经有个注册指向 13 题旧稿 `paper_zzhx.json`，跑一次就把线上 35 题的套卷降级）；源文件缺失或 JSON 解析失败从「警告跳过」改成硬失败（`tmp-build/ms_daofa.json` 是坏 JSON，一路被跳过，坏掉的内置文件因此在仓库里留了好几版）。支持 `--dry-run` 看影响面、`--only <key>` 单个重生成、`--force` 显式确认缩量
@@ -21,6 +21,7 @@
 - 💾 **下载下来的音频进 IndexedDB 缓存**（对象库 `audio`，键 `<题库key>::<文件名>`，值是 Blob）：进考试/套卷时并发 3 路预取本卷未缓存的听力，命中缓存重播不再发网络请求，离线也能听；预算 80 MB，超出按最久未听（`lastUsed`）逐出。传送门弹窗顶部新增「已缓存听力 N 段 · X MB」与一键清空，回收站「彻底删除」/「清空回收站」会连带删掉该题库的音频缓存。不做听力的用户从此不用为音频付出包体，题库越加越多也不会把 APK 撑大
 - 🩹 修两个顺带暴露的旧问题：从传送门重新导入「曾被彻底删除」的内置题库时，`hiddenKeys` 标记没清，看着导入成功、重启 App 又消失；切题时上一题的听力继续播放、按钮还亮着「播放中」，会让人误以为当前题在播
 - 🚨 `tools/build-www.js` 再加一道音频引用门禁：扫 `quizzes/*.json` 与 `js/data/*.js` 里所有 `audio/…` 路径，文件不在仓库就直接非零退出。音频漏 `git add`、或只推 JSON 没推音频，用户端症状只是「音频加载失败」，构建期拦下来比事后查划算
+- 📦 **安装包 6.48 MB → 3.20 MB**（v1.8.0 实测 `app-release.apk` 3,359,358 字节）：移出的是音频，`assets/public/` 里只剩 `index.html`、`manifest.json`、`js/`、`css/`，包内已无 `audio/`、`www/`、`keystore/`
 
 ### v1.7.2（2026-10-23）
 

@@ -4011,7 +4011,7 @@
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
   // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
   // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
-  const APP_VERSION = '1.7.2';
+  const APP_VERSION = '1.8.0';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
