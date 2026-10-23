@@ -63,14 +63,23 @@
   const IDB_NAME = 'quiz-storage';
   const IDB_STORE = 'kv';
   const IDB_IMPORTED_KEY = 'imported-banks';
+  // 听力音频缓存库（v1.8.0 起音频不再随 APK 打包，见下方「在线音频 + 本地缓存」）
+  const IDB_AUDIO_STORE = 'audio';
 
   function openIdb() {
     return new Promise((resolve, reject) => {
       if (!('indexedDB' in window)) { reject(new Error('IndexedDB 不可用')); return; }
-      const req = indexedDB.open(IDB_NAME, 1);
+      const req = indexedDB.open(IDB_NAME, 2);
       req.onupgradeneeded = () => {
-        if (!req.result.objectStoreNames.contains(IDB_STORE)) {
-          req.result.createObjectStore(IDB_STORE);
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+        // 从 v1 升上来时这里也会执行一次；已存在时跳过，不动老数据。
+        if (!db.objectStoreNames.contains(IDB_AUDIO_STORE)) {
+          const store = db.createObjectStore(IDB_AUDIO_STORE, { keyPath: 'cacheKey' });
+          store.createIndex('bankKey', 'bankKey', { unique: false });
+          store.createIndex('lastUsed', 'lastUsed', { unique: false });
         }
       };
       req.onsuccess = () => resolve(req.result);
@@ -221,55 +230,299 @@
     return out;
   }
 
-  // 已知听力题库的音频随 App 内置。Android WebView 不支持 Web Speech API，
-  // 不能再依赖设备 TTS；按题库 key + 题目 id 直接映射到本地音频文件。
-  const BUNDLED_AUDIO_RANGES = {
-    'jlpt-n5-mock-1': [68, 97],
-    'jlpt-n5-full': [215, 250]
-  };
+  // ===== 在线音频 + 本地缓存（v1.8.0）=====
+  // 旧做法：听力 m4a 随 APK 打包进 audio/，题目写相对路径，由 WebView 直接读 assets。
+  // 代价是所有人都为 3 MB 听力付包体，做题多的题库越多包越大，且发版必须重装。
+  // 新做法：
+  //   1. 音频放在仓库 audio/ 下，通过 raw.githubusercontent.com 取（与 quizzes/ 同一套发布链路）；
+  //   2. 第一次播放（或开始含听力的考试前）下载到 IndexedDB 的 audio 对象库，之后离线直接播；
+  //   3. 题库被彻底删除 / 清空回收站时，按 bankKey 连带删掉它已下载的音频；
+  //   4. 缓存超出预算按 lastUsed 逐出，取不到音频时回落到题目原文走 TTS，再不行才提示。
+  //
+  // 题库 JSON 侧的写法（优先级从高到低）：
+  //   q.audioUrl 绝对 URL            → 用它（第三方服务器托管音频）
+  //   q.audioUrl 形如 audio/<key>/x.m4a → 拼到仓库 raw 前缀（已上线的 N5 题库与用户本地已导入的副本都是这个格式，无需改文件）
+  //   bank.audioBase + q.audioUrl    → 拼到题库自己声明的前缀
+  //   bank.audioBase + q.id          → 题库只声明前缀和题号范围，逐题按 <id>.<audioExt> 拼（新题库推荐，JSON 里不用写 66 个字段）
+  const AUDIO_CACHE_BUDGET = 80 * 1024 * 1024; // 80 MB，约 1300 段听力
+  const RAW_REPO_BASE = () => `https://raw.githubusercontent.com/${GITHUB_OWNER}/${GITHUB_REPO}/main/`;
 
-  function getBundledAudioUrl(q) {
+  function bankKeyOf(q) {
+    if (q && typeof q.subjectKey === 'string' && window.QUIZ_DATA && window.QUIZ_DATA[q.subjectKey]) {
+      return q.subjectKey;
+    }
+    if (state.selectedSubject && window.QUIZ_DATA && window.QUIZ_DATA[state.selectedSubject]) {
+      return state.selectedSubject;
+    }
+    return (q && typeof q.subjectKey === 'string') ? q.subjectKey : (state.selectedSubject || '');
+  }
+
+  function joinUrl(base, path) {
+    const b = String(base).trim();
+    const p = String(path).replace(/^\/+/, '');
+    if (!p) return b;
+    return b.endsWith('/') ? b + p : b + '/' + p;
+  }
+
+  // 把题目里写明的（或按题库规则推出来的）音频地址解析成可 fetch 的绝对 URL
+  function resolveAudioUrl(raw, bankKey) {
+    const bank = (window.QUIZ_DATA || {})[bankKey] || {};
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (!value) return '';
+    if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value;
+    const rel = value.replace(/^\.?\//, '');
+    // 仓库约定路径：quizzes/ 里已上线的题库和用户本地已导入的旧副本都长这样
+    if (rel.startsWith('audio/')) return joinUrl(RAW_REPO_BASE(), rel);
+    if (typeof bank.audioBase === 'string' && bank.audioBase.trim()) return joinUrl(bank.audioBase, rel);
+    // 没有 audioBase 的裸相对路径：只在浏览器本地预览有意义，App 里会 404，交给失败提示
+    return rel;
+  }
+
+  // 题库只声明前缀 + 题号范围时，按 id 推断文件名
+  function audioUrlFromBankRange(q, bankKey) {
+    const bank = (window.QUIZ_DATA || {})[bankKey] || {};
+    if (typeof bank.audioBase !== 'string' || !bank.audioBase.trim()) return '';
     const id = Number(q && q.id);
     if (!Number.isInteger(id)) return '';
-    const keys = [];
-    if (q && typeof q.subjectKey === 'string') keys.push(q.subjectKey);
-    if (state.selectedSubject && !keys.includes(state.selectedSubject)) {
-      keys.push(state.selectedSubject);
-    }
-    for (const key of keys) {
-      const range = BUNDLED_AUDIO_RANGES[key];
-      if (range && id >= range[0] && id <= range[1]) {
-        return `audio/${key}/${id}.m4a`;
-      }
-    }
-    return '';
+    const range = bank.audioIds;
+    if (Array.isArray(range) && !range.map(Number).includes(id)) return '';
+    if (Array.isArray(bank.audioRange) && (id < Number(bank.audioRange[0]) || id > Number(bank.audioRange[1]))) return '';
+    const ext = typeof bank.audioExt === 'string' && /^\.[a-z0-9]+$/i.test(bank.audioExt) ? bank.audioExt : '.m4a';
+    return joinUrl(bank.audioBase, `${id}${ext}`);
+  }
+
+  function audioCacheKey(bankKey, url) {
+    const file = String(url).split('?')[0].split('/').pop() || String(url);
+    return `${bankKey || '?'}::${file}`;
   }
 
   // 统一识别题目音频，兼容多种常见字段名：
-  //   audioUrl / audio_url / mp3 / sound            → 直接播放音频文件
-  //   已知内置题库                                  → 播放随 App 打包的音频
-  //   audio / audioText / listening / speech / tts  → 走 TTS 朗读（兜底）
+  //   audioUrl / audio_url / mp3 / sound            → 音频文件（相对路径按上面的规则解析）
+  //   bank.audioBase（+ audioIds/audioRange）        → 按题库声明推断文件名
+  //   audio / audioText / listening / speech / tts  → 走 TTS 朗读（兜底，Android WebView 常常没有引擎）
   //   audio 也可以是 { url } 或 { text } 对象
   function getQuestionAudio(q) {
     if (!q) return null;
-    const raw = q.audio;
-    if (raw && typeof raw === 'object') {
-      const u = raw.url || raw.src;
-      if (u && typeof u === 'string') return { type: 'url', src: u };
-      const t = raw.text || raw.tts || raw.script;
-      if (t && typeof t === 'string') return { type: 'tts', src: t };
-    }
-    const url = q.audioUrl || q.audio_url || q.mp3 || q.sound
-      || (typeof raw === 'string' && /^(https?:)?\/\//.test(raw) ? raw : '')
-      || (typeof raw === 'string' && /\.(mp3|m4a|wav|ogg)(\?|$)/i.test(raw) ? raw : '');
-    if (url && typeof url === 'string') return { type: 'url', src: url };
-    const bundled = getBundledAudioUrl(q);
-    if (bundled) return { type: 'url', src: bundled };
-    const text = (typeof raw === 'string' && !url ? raw : '')
+    const bankKey = bankKeyOf(q);
+    const fallbackText = (typeof q.audio === 'string' && !/^(https?:)?\/\//i.test(q.audio) && !/\.(mp3|m4a|wav|ogg|aac)(\?|$)/i.test(q.audio) ? q.audio : '')
       || q.audioText || q.audio_text || q.audio_script
-      || q.listening || q.speech || q.tts;
-    if (text && typeof text === 'string') return { type: 'tts', src: text };
+      || q.listening || q.speech || q.tts || '';
+
+    const raw = q.audio;
+    let rawUrl = '';
+    if (raw && typeof raw === 'object') {
+      rawUrl = raw.url || raw.src || '';
+    } else {
+      rawUrl = q.audioUrl || q.audio_url || q.mp3 || q.sound
+        || (typeof raw === 'string' && (/^(https?:)?\/\//i.test(raw) || /\.(mp3|m4a|wav|ogg|aac)(\?|$)/i.test(raw)) ? raw : '');
+    }
+    let url = resolveAudioUrl(rawUrl, bankKey);
+    if (!url) url = audioUrlFromBankRange(q, bankKey);
+    if (url) return { type: 'url', src: url, bankKey, cacheKey: audioCacheKey(bankKey, url), fallbackText };
+
+    if (raw && typeof raw === 'object') {
+      const t = raw.text || raw.tts || raw.script;
+      if (t && typeof t === 'string') return { type: 'tts', src: t, bankKey };
+    }
+    if (typeof raw === 'string' && raw && !fallbackText) return { type: 'tts', src: raw, bankKey };
+    if (fallbackText) return { type: 'tts', src: fallbackText, bankKey };
     return null;
+  }
+
+  // ----- 音频缓存的读写（IndexedDB 对象库 audio，值是 Blob）-----
+  // 记录结构：{ cacheKey, bankKey, url, bytes, mime, blob, lastUsed }
+  // bankKey 索引用于「删题库连带删音频」，lastUsed 索引用于超出预算时逐出最久没听的。
+  function audioCacheGet(cacheKey) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const rq = db.transaction(IDB_AUDIO_STORE, 'readonly').objectStore(IDB_AUDIO_STORE).get(cacheKey);
+      rq.onsuccess = () => resolve(rq.result || null);
+      rq.onerror = () => reject(rq.error);
+    }));
+  }
+
+  function audioCachePut(record) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_AUDIO_STORE, 'readwrite');
+      tx.objectStore(IDB_AUDIO_STORE).put(record);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('写入被中止'));
+    }));
+  }
+
+  // 只刷新 lastUsed（命中缓存时调用，让 LRU 反映真实收听顺序）
+  function audioCacheTouch(record) {
+    if (!record) return Promise.resolve();
+    return audioCachePut({ ...record, lastUsed: Date.now() }).catch(() => {});
+  }
+
+  function audioCacheDeleteBank(bankKey) {
+    if (!bankKey) return Promise.resolve(0);
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_AUDIO_STORE, 'readwrite');
+      const index = tx.objectStore(IDB_AUDIO_STORE).index('bankKey');
+      let removed = 0;
+      const rq = index.openCursor(IDBKeyRange.only(bankKey));
+      rq.onsuccess = () => {
+        const cursor = rq.result;
+        if (cursor) { cursor.delete(); removed++; cursor.continue(); }
+      };
+      tx.oncomplete = () => resolve(removed);
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
+  // 返回 { total, bytes, banks: { bankKey: { count, bytes, files: [cacheKey…] } } }
+  function audioCacheStats() {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const banks = {};
+      let total = 0, bytes = 0;
+      // 游标没走完不能 resolve，所以用游标自己所属的那个事务的 oncomplete
+      const tx = db.transaction(IDB_AUDIO_STORE, 'readonly');
+      const rq = tx.objectStore(IDB_AUDIO_STORE).openCursor();
+      rq.onsuccess = () => {
+        const cursor = rq.result;
+        if (!cursor) return;
+        const rec = cursor.value || {};
+        const bk = rec.bankKey || '?';
+        if (!banks[bk]) banks[bk] = { count: 0, bytes: 0, files: [] };
+        banks[bk].count++;
+        banks[bk].bytes += Number(rec.bytes) || 0;
+        banks[bk].files.push(rec.cacheKey);
+        total++;
+        bytes += Number(rec.bytes) || 0;
+        cursor.continue();
+      };
+      rq.onerror = () => reject(rq.error);
+      tx.oncomplete = () => resolve({ total, bytes, banks });
+      tx.onabort = () => reject(tx.error || new Error('读取被中止'));
+    })).catch(() => ({ total: 0, bytes: 0, banks: {} }));
+  }
+
+  // 超出预算就按 lastUsed 从旧到新逐出（正在播的那条也在候选里，但播放器已拿到 Blob，不受影响）
+  function audioCacheEvict(budget) {
+    const limit = budget || AUDIO_CACHE_BUDGET;
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const items = [];
+      // 注意别写 index.transaction：Chromium 的 IDBIndex/IDBObjectStore 上不暴露这个属性，
+      // 取到 undefined 再赋 oncomplete 会抛 TypeError，被外层 catch 吞掉后就是「逐出静默失效」。
+      const tx = db.transaction(IDB_AUDIO_STORE, 'readonly');
+      const rq = tx.objectStore(IDB_AUDIO_STORE).index('lastUsed').openCursor();
+      rq.onsuccess = () => {
+        const cursor = rq.result;
+        if (cursor) { items.push({ key: cursor.value.cacheKey, bytes: Number(cursor.value.bytes) || 0 }); cursor.continue(); }
+      };
+      rq.onerror = () => reject(rq.error);
+      tx.oncomplete = () => {
+        let used = items.reduce((n, it) => n + it.bytes, 0);
+        if (used <= limit) { resolve(0); return; }
+        const wtx = db.transaction(IDB_AUDIO_STORE, 'readwrite');
+        const store = wtx.objectStore(IDB_AUDIO_STORE);
+        let freed = 0;
+        for (const it of items) {
+          if (used <= limit) break;
+          store.delete(it.key);
+          used -= it.bytes;
+          freed += it.bytes;
+        }
+        wtx.oncomplete = () => resolve(freed);
+        wtx.onerror = () => reject(wtx.error);
+      };
+      tx.onabort = () => reject(tx.error || new Error('读取被中止'));
+    })).catch(err => {
+      console.warn('音频缓存逐出失败', err);
+      return 0;
+    });
+  }
+
+  // 一组题目里需要联网取的音频（按 cacheKey 去重）
+  function collectAudioTargets(questions, bankKey) {
+    const targets = [];
+    const seen = {};
+    (questions || []).forEach(q => {
+      const a = getQuestionAudio(bankKey ? { ...q, subjectKey: bankKey } : q);
+      if (!a || a.type !== 'url' || seen[a.cacheKey]) return;
+      seen[a.cacheKey] = true;
+      targets.push(a);
+    });
+    return targets;
+  }
+
+  // 考前预取：考试中途断网就听不到听力了，所以开考前先把这批音频落到本地缓存。
+  // 不阻塞开考 —— 下载在后台跑，已缓存的部分立刻能播。
+  function ensureExamAudio(bankKey, questions) {
+    const targets = collectAudioTargets(questions, bankKey);
+    if (!targets.length) return;
+    audioCacheStats().then(stats => {
+      const missing = targets.filter(t => !(stats.banks[t.bankKey || '?'] || {}).files
+        || !stats.banks[t.bankKey || '?'].files.includes(t.cacheKey));
+      if (!missing.length) return;
+      if (navigator.onLine === false) {
+        showToast(`离线，${missing.length} 段听力尚未下载，考试里可能听不到音频`);
+        return;
+      }
+      showToast(`开始下载 ${missing.length} 段未缓存的听力，下载后离线可重复播放`);
+      let done = 0, failed = 0;
+      const queue = missing.slice();
+      const worker = () => {
+        const item = queue.shift();
+        if (!item) return Promise.resolve();
+        return getAudioBlob(item.src, item.cacheKey, item.bankKey)
+          .then(() => { done++; }, () => { failed++; })
+          .then(worker);
+      };
+      // 三路并发：raw.githubusercontent 单连接会限速，串行下载整包听力太慢
+      Promise.all([worker(), worker(), worker()]).then(() => {
+        if (failed) showToast(`听力缓存完成 ${done} 段，失败 ${failed} 段（播放时会重试）`);
+        else showToast(`听力已全部缓存到本地（${done} 段），之后离线也能播`);
+        refreshAudioCacheBar();
+      });
+    });
+  }
+
+  // 删掉的题库连带清掉它已下载的音频（只在彻底删除 / 清空回收站时调用，进回收站要能恢复）
+  function purgeBankAudio(bankKey) {
+    return audioCacheDeleteBank(bankKey)
+      .then(removed => {
+        if (removed) refreshAudioCacheBar();
+        return removed;
+      })
+      .catch(() => 0);
+  }
+
+  // 全部音频缓存清零（题库本身不动，音频会按需重新下载）
+  function clearAllAudioCache() {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_AUDIO_STORE, 'readwrite');
+      tx.objectStore(IDB_AUDIO_STORE).clear();
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => reject(tx.error);
+    })).catch(() => false);
+  }
+
+  // 传送门里显示听力音频占了多少空间，并给一个手动清理入口
+  function refreshAudioCacheBar() {
+    const bar = $('portal-audio-bar');
+    if (!bar) return;
+    audioCacheStats().then(stats => {
+      if (!stats.total) {
+        bar.innerHTML = '<span class="audio-cache-note">🎧 听力音频尚未下载：播放或开考时自动取，取过之后离线可播</span>';
+        return;
+      }
+      const banks = Object.keys(stats.banks).length;
+      bar.innerHTML = `<span class="audio-cache-note">🎧 已缓存听力 ${stats.total} 段 · ${formatSize(stats.bytes)}（${banks} 个题库）</span>`
+        + '<button type="button" class="audio-cache-clear" id="portal-audio-clear-btn">清空</button>';
+      const btn = $('portal-audio-clear-btn');
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (!confirm(`确定清空 ${stats.total} 段已下载的听力音频（${formatSize(stats.bytes)}）吗？\n题库和进度不受影响，下次播放会重新下载。`)) return;
+          clearAllAudioCache().then(() => {
+            refreshAudioCacheBar();
+            showToast('听力音频缓存已清空');
+          });
+        });
+      }
+    });
   }
 
   // ===== 主观题判定 =====
@@ -486,31 +739,111 @@
     }, 60);
   }
 
-  // 播放音频文件（mp3/m4a 等 URL），供导入的真人录音题库使用
+  // 播放题目音频：本地缓存命中直接播，没命中先下载再播（下载过一次之后就离线可用）。
+  // 统一入口 playAudioSrc()：type==='tts' 走设备朗读，type==='url' 走这里。
   let currentAudioEl = null;
-  function playAudioUrl(src, btn) {
+  let currentObjectUrl = null;
+  let currentAudioKey = '';
+  const audioInflight = {}; // cacheKey -> Promise<Blob>，连点或回顾页重复引用时不重复下载
+
+  function stopCurrentAudio(btn) {
     if (currentAudioEl) {
       try { currentAudioEl.pause(); } catch (e) {}
       currentAudioEl = null;
-      setAudioBtnState(btn, false);
+    }
+    if (currentObjectUrl) {
+      try { URL.revokeObjectURL(currentObjectUrl); } catch (e) {}
+      currentObjectUrl = null;
+    }
+    currentAudioKey = '';
+    setAudioBtnState(btn, false);
+  }
+
+  function releaseAudioUrl() {
+    if (currentObjectUrl) {
+      try { URL.revokeObjectURL(currentObjectUrl); } catch (e) {}
+      currentObjectUrl = null;
+    }
+  }
+
+  // 取音频 Blob：缓存 → 正在进行的下载 → 联网下载并写缓存
+  function getAudioBlob(url, cacheKey, bankKey) {
+    return audioCacheGet(cacheKey).catch(() => null).then(hit => {
+      if (hit && hit.blob) { audioCacheTouch(hit); return hit.blob; }
+      if (audioInflight[cacheKey]) return audioInflight[cacheKey];
+      const task = fetch(url, { cache: 'force-cache' })
+        .then(res => {
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const mime = (res.headers.get('content-type') || '').toLowerCase();
+          if (mime.includes('text/')) throw new Error('地址返回的是网页不是音频（' + mime + '）');
+          return res.blob();
+        })
+        .then(blob => {
+          if (!blob || !blob.size) throw new Error('音频为空');
+          // GitHub raw 取不到文件时返回 14 字节的 "404: Not Found"，别把它当音频存下来
+          if (blob.size < 1024) throw new Error('音频内容异常（' + blob.size + ' 字节）');
+          return audioCachePut({
+            cacheKey, bankKey: bankKey || '', url,
+            bytes: blob.size, mime: blob.type || 'audio/mp4', blob, lastUsed: Date.now()
+          }).catch(err => {
+            console.warn('音频写缓存失败（配额可能不足），本次仍可播放', err);
+            return null;
+          }).then(() => audioCacheEvict().catch(() => null)).then(() => blob);
+        });
+      audioInflight[cacheKey] = task;
+      const cleanup = () => { if (audioInflight[cacheKey] === task) delete audioInflight[cacheKey]; };
+      task.then(cleanup, cleanup);
+      return task;
+    });
+  }
+
+  function playRemoteAudio(audioSrc, btn) {
+    if (currentAudioEl && currentAudioKey === audioSrc.cacheKey) {
+      stopCurrentAudio(btn);
       return;
     }
+    stopCurrentAudio(btn);
+    currentAudioKey = audioSrc.cacheKey;
     setAudioBtnState(btn, true, '加载中…');
-    const audio = new Audio(src);
-    audio.preload = 'auto';
-    currentAudioEl = audio;
-    audio.onplay = () => setAudioBtnState(btn, true, '播放中…');
-    audio.onended = () => { currentAudioEl = null; setAudioBtnState(btn, false); };
-    audio.onerror = () => {
-      currentAudioEl = null;
-      setAudioBtnState(btn, false);
-      showToast('音频加载失败，请检查网络或文件地址');
-    };
-    audio.play().catch(err => {
-      currentAudioEl = null;
-      setAudioBtnState(btn, false);
-      showToast('播放失败：' + (err.message || err));
+
+    getAudioBlob(audioSrc.src, audioSrc.cacheKey, audioSrc.bankKey).then(blob => {
+      // 等待期间用户又点了别的题：这一条直接丢弃
+      if (currentAudioKey !== audioSrc.cacheKey) return;
+      const objectUrl = URL.createObjectURL(blob);
+      currentObjectUrl = objectUrl;
+      const audio = new Audio(objectUrl);
+      audio.preload = 'auto';
+      currentAudioEl = audio;
+      audio.onplay = () => setAudioBtnState(btn, true, '播放中…');
+      audio.onended = () => { if (currentAudioKey === audioSrc.cacheKey) stopCurrentAudio(btn); };
+      audio.onerror = () => {
+        if (currentAudioKey !== audioSrc.cacheKey) return;
+        stopCurrentAudio(btn);
+        showToast('音频解码失败，格式可能不受设备支持');
+      };
+      audio.play().catch(err => {
+        if (currentAudioKey !== audioSrc.cacheKey) return;
+        stopCurrentAudio(btn);
+        showToast('播放失败：' + (err.message || err));
+      });
+    }).catch(err => {
+      if (currentAudioKey !== audioSrc.cacheKey) return;
+      stopCurrentAudio(btn);
+      const msg = (err && err.message) || String(err);
+      // 取不到文件时题目原文还在，能读的设备就用 TTS 顶一下
+      if (audioSrc.fallbackText && /无网络|Network|Failed to fetch|fetch/i.test(msg)) {
+        showToast('离线且未缓存该音频，改用语音朗读');
+        playAudio(audioSrc.fallbackText, btn);
+        return;
+      }
+      showToast('音频加载失败：' + msg + '（请检查网络，或确认题库的音频地址可访问）');
     });
+  }
+
+  function playAudioSrc(audioSrc, btn) {
+    if (!audioSrc) return;
+    if (audioSrc.type === 'url') playRemoteAudio(audioSrc, btn);
+    else playAudio(audioSrc.src, btn);
   }
 
   // ===== 每日一言 =====
@@ -1093,6 +1426,8 @@
     // 考试模式：启动倒计时
     if (state.isExam) {
       startExamTimer();
+      // 考试中途断网就听不到听力，开考前把这一批音频先缓存到本地
+      ensureExamAudio(state.selectedSubject, state.questions);
     }
   }
 
@@ -1138,6 +1473,7 @@
     renderQuestion();
     startExamTimer();
     showToast(`套卷考试开始：${total} 题 · 共 ${Math.round(state.examTimeLimit / 60)} 分钟`);
+    ensureExamAudio(key, questions);
   }
 
   function startPaperPractice() {
@@ -1528,12 +1864,17 @@
         $('question-text').insertAdjacentElement('afterend', audioBtn);
       }
       audioBtn.style.display = 'inline-flex';
-      audioBtn.onclick = () => {
-        if (audioSrc.type === 'url') playAudioUrl(audioSrc.src, audioBtn);
-        else playAudio(audioSrc.src, audioBtn);
-      };
+      audioBtn.onclick = () => playAudioSrc(audioSrc, audioBtn);
     } else if (audioBtn) {
       audioBtn.style.display = 'none';
+    }
+    // 换题不残留：上一题的听力继续放着、按钮还亮着「播放中」的话，用户会以为当前题在播。
+    // 听力考试的场景尤其明显（翻到下一题时前一题的录音还没念完）。
+    if (currentAudioEl || currentAudioKey || (audioBtn && audioBtn.classList.contains('playing'))) {
+      stopCurrentAudio(audioBtn);
+    }
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+      try { window.speechSynthesis.cancel(); } catch (e) {}
     }
     // 听力题却没有音频：给出明确提示，避免用户以为题目坏了
     let audioHint = $('audio-missing-hint');
@@ -2271,10 +2612,7 @@
       const q = state.questions[idx];
       const audioSrc = getQuestionAudio(q);
       if (!audioSrc) return;
-      btn.addEventListener('click', () => {
-        if (audioSrc.type === 'url') playAudioUrl(audioSrc.src, btn);
-        else playAudio(audioSrc.src, btn);
-      });
+      btn.addEventListener('click', () => playAudioSrc(audioSrc, btn));
     });
 
     // 更新筛选条状态
@@ -2461,6 +2799,20 @@
     if (data.questions.length === 0) {
       return { valid: false, error: '题库为空，至少需要一道题' };
     }
+    // 听力音频的在线地址前缀（v1.8.0 起音频不随 APK 打包，播放时按这个前缀取）
+    if (data.audioBase !== undefined && data.audioBase !== null) {
+      if (typeof data.audioBase !== 'string' || !/^(https?:)?\/\//i.test(data.audioBase.trim())) {
+        return { valid: false, error: 'audioBase 必须是以 http(s):// 开头的音频地址前缀' };
+      }
+      if (data.audioIds !== undefined && !Array.isArray(data.audioIds)) {
+        return { valid: false, error: 'audioIds 必须是题号数组' };
+      }
+      if (data.audioRange !== undefined
+          && (!Array.isArray(data.audioRange) || data.audioRange.length !== 2
+              || data.audioRange.some(n => !Number.isInteger(Number(n))))) {
+        return { valid: false, error: 'audioRange 必须是 [起始题号, 结束题号] 两个整数' };
+      }
+    }
     // 测评型题库：无对错，按选项映射的标签计分出结果
     if (data.type === 'assessment') {
       if (!Array.isArray(data.results) || data.results.length === 0) {
@@ -2566,6 +2918,14 @@
     if (data.exam && typeof data.exam === 'object') {
       window.QUIZ_DATA[data.key].exam = data.exam;
     }
+    // 听力音频在线地址：只有 addBank 认的顶层字段才会被保留，不透传就等于丢
+    if (typeof data.audioBase === 'string' && data.audioBase.trim()) {
+      const bank = window.QUIZ_DATA[data.key];
+      bank.audioBase = data.audioBase.trim();
+      if (Array.isArray(data.audioIds)) bank.audioIds = data.audioIds.map(Number).filter(Number.isInteger);
+      if (Array.isArray(data.audioRange) && data.audioRange.length === 2) bank.audioRange = data.audioRange.map(Number);
+      if (typeof data.audioExt === 'string' && /^\.[a-z0-9]+$/i.test(data.audioExt)) bank.audioExt = data.audioExt.toLowerCase();
+    }
     // 测评型题库：透传计分所需字段
     if (data.type === 'assessment') {
       window.QUIZ_DATA[data.key].type = 'assessment';
@@ -2574,6 +2934,12 @@
       window.QUIZ_DATA[data.key].dimensions = data.dimensions || [];
     }
     state.importedKeys[data.key] = true;
+    // 重新导入要能覆盖「彻底删除」的标记：hideDeletedBanks() 是无条件按 hiddenKeys 移除的，
+    // 不清掉的话，用户从传送门找回题库时看着导入成功，重启 App 又消失了（内置题库删除后线上找回是唯一通道）。
+    if (state.hiddenKeys[data.key]) {
+      delete state.hiddenKeys[data.key];
+      saveRecycleBin();
+    }
   }
 
   // 应用导入（覆盖或追加）
@@ -2707,6 +3073,11 @@
       state.hiddenKeys[key] = true;
     }
 
+    // 题库都没了，留着它的听力音频只会占空间（移入回收站时不删，还要能恢复）
+    purgeBankAudio(key).then(removed => {
+      if (removed) showToast(`已同时清理 ${removed} 段听力音频`);
+    });
+
     saveRecycleBin();
     renderRecycleBinList();
     updateRecycleBinBadge();
@@ -2728,6 +3099,7 @@
       } else {
         state.hiddenKeys[key] = true;
       }
+      purgeBankAudio(key);
     });
     state.recycleBin = {};
 
@@ -4146,6 +4518,7 @@
 
   function openPortalModal() {
     $('portal-modal').style.display = 'flex';
+    refreshAudioCacheBar();
     loadPortalList(false);
   }
 

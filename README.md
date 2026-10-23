@@ -16,6 +16,10 @@
 - 🚧 **加了三道护栏**（都是这次踩过的坑）：镜像文件名按 key 反查已有文件，不再另写一个「同 key 不同文件名」的副本造成用户侧题库分裂；题量比现有镜像变少时拒绝写入（曾经有个注册指向 13 题旧稿 `paper_zzhx.json`，跑一次就把线上 35 题的套卷降级）；源文件缺失或 JSON 解析失败从「警告跳过」改成硬失败（`tmp-build/ms_daofa.json` 是坏 JSON，一路被跳过，坏掉的内置文件因此在仓库里留了好几版）。支持 `--dry-run` 看影响面、`--only <key>` 单个重生成、`--force` 显式确认缩量
 - 🧬 **四个内置题库与线上镜像内容对齐**：`zhsz-zhongxue` / `jyzn-zhongxue` / `xk-zhengzhi` / `ms-daofa-zhengzhi` 的源文件早已丢失，注册表改为直接以已上线、已通过校验的 `quizzes/*.json` 为准（`fromQuiz`）。重新生成的内置文件在 App 内实测：200 / 200 / 40（含 10 主观）/ 60 题，首页四张卡齐全
 - 🛠 `tools/build-www.js` 新增内置↔镜像一致性门禁：逐个解析 `js/data/*.js`，与 `quizzes/` 同 key 镜像逐题比对，内容不一致或干脆没有镜像（用户删除内置后无法找回）都非零退出。这两份过去各改各的，症状只是首页少一张卡，不报错、控制台以外看不出来
+- 🎧 **听力音频不再打进 APK**：66 个 m4a（约 2.98 MB）从打包白名单里移出，`www/` 从 3.58 MB 降到 636 KB。题库里的 `audioUrl` 写仓库相对路径 `audio/<题库key>/<id>.m4a`，App 拼 `raw.githubusercontent.com/cedarln/paopao-quiz/main/…` 在线取；地址解析优先级为「绝对 `audioUrl` → `audio/` 仓库相对 → 题库 `audioBase` 拼接 → `audioBase` + 题号（可用 `audioIds`/`audioRange` 限定、`audioExt` 指定扩展名）」，没有 `audioBase` 的裸相对路径视为无效（包里没这个文件，只会 404）
+- 💾 **下载下来的音频进 IndexedDB 缓存**（对象库 `audio`，键 `<题库key>::<文件名>`，值是 Blob）：进考试/套卷时并发 3 路预取本卷未缓存的听力，命中缓存重播不再发网络请求，离线也能听；预算 80 MB，超出按最久未听（`lastUsed`）逐出。传送门弹窗顶部新增「已缓存听力 N 段 · X MB」与一键清空，回收站「彻底删除」/「清空回收站」会连带删掉该题库的音频缓存。不做听力的用户从此不用为音频付出包体，题库越加越多也不会把 APK 撑大
+- 🩹 修两个顺带暴露的旧问题：从传送门重新导入「曾被彻底删除」的内置题库时，`hiddenKeys` 标记没清，看着导入成功、重启 App 又消失；切题时上一题的听力继续播放、按钮还亮着「播放中」，会让人误以为当前题在播
+- 🚨 `tools/build-www.js` 再加一道音频引用门禁：扫 `quizzes/*.json` 与 `js/data/*.js` 里所有 `audio/…` 路径，文件不在仓库就直接非零退出。音频漏 `git add`、或只推 JSON 没推音频，用户端症状只是「音频加载失败」，构建期拦下来比事后查划算
 
 ### v1.7.2（2026-10-23）
 
@@ -336,6 +340,9 @@ python3 -m http.server 8090
 | `description` | string | ❌ | 题库描述 |
 | `category` | string | ❌ | 分类标签 |
 | `exam` | object | ❌ | 套卷预设：`count` 题量、`minutes` 总时长、`preserveOrder` 保持卷面顺序、`sections` 分节（`name` / `count` / `minutes`）与 `description`。带 `preserveOrder` 或 `sections` 的题库会自动启用**套卷模式**，一键整卷开考，按节独立计时 |
+| `audioBase` | string | ❌ | 按题号推断音频文件名时的地址前缀（必须 `http(s)://` 开头），适合音频托管在自己的 CDN。仓库内题库不用写，`audioUrl` 用相对路径即可 |
+| `audioIds` / `audioRange` | array | ❌ | 配合 `audioBase`：`audioIds` 列出哪些题号有音频，`audioRange` 写 `[起始题号, 结束题号]` 闭区间 |
+| `audioExt` | string | ❌ | 配合 `audioBase` 的扩展名，如 `.mp3`，默认 `.m4a` |
 
 ### 题目字段
 
@@ -346,12 +353,12 @@ python3 -m http.server 8090
 | `answer` | number | ✅ | 正确答案索引（从 0 开始） |
 | `explanation` | string | ❌ | 答案解析 |
 | `category` | string | ❌ | 题目分类（用于分类筛选） |
-| `audio` | string | ❌ | 听力朗读文本（系统 TTS 兜底；N5 内置题库已改为内置音频） |
-| `audioUrl` | string | ❌ | 音频文件地址（mp3 / m4a / wav / ogg），支持相对路径如 `audio/xxx/1.m4a`，优先于 TTS |
+| `audio` | string | ❌ | 听力朗读文本（系统 TTS 兜底；Android WebView 不支持 Web Speech API，真机上放不出声，所以听力题务必给 `audioUrl`） |
+| `audioUrl` | string | ❌ | 音频地址，优先于 TTS。写仓库相对路径 `audio/<题库key>/<id>.m4a` 即可，App 会拼成 GitHub raw 在线地址下载；也支持 `https://` 绝对地址 |
 
 > 听力题示例：`"audio": "女：あした 何を しますか。男：…（完整对话与问题）"`，播放按钮会自动出现在题干下方。
 >
-> 💡 从 v1.6.3 起，N5 模拟卷第1回与 N5 全项题库的听力已内置 m4a 音频，随 App 打包，可离线播放。
+> 💡 从 v1.8.0 起听力音频**不再随 APK 打包**：音频放在仓库 `audio/<题库key>/<id>.m4a`，进考试时按需在线下载（并发预取）并缓存到本地，之后离线可重播；题库被彻底删除时缓存一并清掉。所以发布带听力的题库只要把 m4a 和 JSON 一起推到 GitHub，**不需要重新发版**，也不做听力的用户不会为音频付出安装包体积。
 
 > 💡 你可以把 doc / pdf / url 链接发给我，我会帮你制作成对应的题库配置文件。
 
@@ -382,6 +389,8 @@ python3 -m http.server 8090
 | `quiz-stats` | 学习统计（答题数、正确率、打卡） |
 | `quiz-theme` | 当前主题 |
 | `quiz-bg` | 自定义背景（图片/视频 base64） |
+
+听力音频从 v1.8.0 起存在 **IndexedDB**（库 `quiz-storage`，对象库 `audio`，键 `<题库key>::<文件名>`，值是 Blob），不占 localStorage 配额；上限 80 MB，按最久未听逐出，传送门弹窗里可一键清空。
 
 ---
 

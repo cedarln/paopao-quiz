@@ -25,13 +25,15 @@ const FILES = ['index.html', 'manifest.json'];
 // 顶层目录（整棵递归拷贝）
 // js/     —— app.js + data/ 内置题库
 // css/    —— style.css
-// audio/  —— 听力 m4a，app.js 按 `audio/<bankKey>/<id>.m4a` 相对 web 根取，必须离线内置
-const DIRS = ['js', 'css', 'audio'];
+// 注意：audio/ 从 v1.8.0 起**不再打包**。听力改为放在仓库里由 raw.githubusercontent.com 提供，
+// 用户播放或开考时下载到 IndexedDB，删题库连带删除 —— 包体因此少 ~3 MB，且不随题库增长。
+// 仓库里的 audio/ 仍然是发布源（必须 commit + push，否则线上题库取不到音频），只是不进 APK。
+const DIRS = ['js', 'css'];
 
 // 永远不进包，即使被误加进 DIRS 也要拦住
 const DENY = new Set([
   'keystore', 'node_modules', 'screenshots', 'samples', 'tmp-build',
-  'quizzes', 'android', 'data', '.git', 'tools'
+  'quizzes', 'android', 'data', '.git', 'tools', 'audio'
 ]);
 
 function rmrf(target) {
@@ -189,9 +191,63 @@ function checkBuiltinDrift() {
   }
 }
 
+// 音频不再打包之后，唯一的失败模式是「题库里写了 audio/…，仓库里却没有这个文件」：
+// 线上取到 404，用户端只显示一句「音频加载失败」，排查成本全压在手机上。这里在构建时核对。
+function checkAudioReferences() {
+  const sources = [];
+  const quizDir = path.join(ROOT, 'quizzes');
+  if (fs.existsSync(quizDir)) {
+    for (const f of fs.readdirSync(quizDir)) {
+      if (f.endsWith('.json')) sources.push(path.join('quizzes', f));
+    }
+  }
+  const dataDir = path.join(ROOT, 'js', 'data');
+  if (fs.existsSync(dataDir)) {
+    for (const f of fs.readdirSync(dataDir)) {
+      if (f.endsWith('.js')) sources.push(path.join('js', 'data', f));
+    }
+  }
+
+  const refs = new Map(); // relPath -> [出题源]
+  const pattern = /"(?:audioUrl|audio_url|mp3|sound)"\s*:\s*"(audio\/[^"]+)"/g;
+  for (const rel of sources) {
+    const text = fs.readFileSync(path.join(ROOT, rel), 'utf8');
+    let m;
+    while ((m = pattern.exec(text)) !== null) {
+      const target = m[1];
+      if (!refs.has(target)) refs.set(target, []);
+      if (!refs.get(target).includes(rel)) refs.get(target).push(rel);
+    }
+  }
+
+  const missing = [];
+  let bytes = 0;
+  for (const [target, from] of refs) {
+    const filepath = path.join(ROOT, target);
+    if (fs.existsSync(filepath)) {
+      bytes += fs.statSync(filepath).size;
+    } else {
+      missing.push(`${target}（被 ${from.join('、')} 引用）`);
+    }
+  }
+
+  if (missing.length) {
+    console.error(`❌ 题库引用了 ${missing.length} 个仓库里不存在的音频文件（App 里会提示加载失败）：`);
+    for (const item of missing.slice(0, 15)) console.error('   ' + item);
+    if (missing.length > 15) console.error(`   …另有 ${missing.length - 15} 个`);
+    console.error('   音频必须 commit + push 到仓库（raw.githubusercontent 直接按 main 分支取），发布链路见 README「签名与发版」。');
+    process.exitCode = 1;
+  } else if (refs.size) {
+    console.log(`音频引用核对通过：${refs.size} 个 audio/ 文件全部在仓库中（共 ${human(bytes)}，不打包、走在线下载）`);
+  } else {
+    console.log('音频引用核对：没有题库使用 audio/ 相对路径');
+  }
+}
+
 function main() {
   checkVersions();
   checkBuiltinDrift();
+  checkAudioReferences();
 
   // 只清 www 自己，绝不碰仓库其它目录
   rmrf(OUT);
