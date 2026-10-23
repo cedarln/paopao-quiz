@@ -4,13 +4,40 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.7.1-orange)
+![Version](https://img.shields.io/badge/version-1.7.2-orange)
 
 ---
 
 ## 📦 Releases
 
+### v1.7.2（2026-10-23）
+
+- 🧭 **新增「题目总览」题号盘**：做题页右上角常驻入口，题号按题型分组（如单项选择题 / 辨析题 / 简答题 / 材料分析题），标注已答、未答、当前、已收藏，点题号直达。解决套卷三十多题只有「上一题/下一题」、做完没法回头检查选择题的问题。交卷后的「答题回顾」页顶部同样提供号盘，点击滚动定位到那道题，处于「只看错题」时会自动切回全部再定位
+- 🩹 **套卷考试模式按节约束**：每节单独计时，号盘只允许在本节内跳转，其余节标为「已锁定」，避免跨节跳题把时限打乱
+- 📅 修复首页考试倒计时日期格式错误（`2027年03年06日` → `2027年03月06日`），并把标题与日期、剩余天数改为两行排版，长标题不再被挤成一列单字
+- 🪜 修复导入在线题库失败时报错弹窗被「传送门」界面遮挡的问题（所有 `.modal-overlay` 同为 `z-index:1000`，叠放次序只由 DOM 顺序决定），反馈类弹窗显式抬到 1200
+- 🔢 首页按钮（错题本 / 收藏夹 / 成就 / 回收站 / 传送门）的数字角标不再被截断：按钮为了水波纹效果设了 `overflow:hidden`，角标改用内侧角落 + 白色描边
+- 📦 **安装包从 20.7 MB 降到 6.3 MB**：`www/` 过去是「整仓拷贝」，导致 `assets/public/` 里同时存在 22 MB 的 `www/www` 套娃副本、17 MB 没有任何代码读取的 `quizzes/` 镜像、以及 screenshots / samples / README。现在改为 `tools/build-www.js` 白名单构建，只装 `index.html`、`manifest.json`、`js/`、`css/`、`audio/`
+- 🔐 **签名密钥已轮换**（见下方「签名与发版」）。旧 v1.7.1 的 APK 里意外打包了 `keystore/paopao-quiz.jks`，新密钥签名的包无法覆盖安装旧包，**需要先卸载旧版本再装 1.7.2**
+- 🧪 补发上次漏发的内容：v1.7.1 的 Release 包实际是 v1.7.0 的内容（`cap sync` 失败后仍然构建了 APK），三个教资套卷与增强版 MBTI 到本版才真正进包 / 上线
+- 🛠 `APP_VERSION` 与 `build.gradle` 的 `versionName` 由 `tools/build-www.js` 每次构建自动核对，不一致直接报错退出
+
+#### 签名与发版
+
+密钥库 `keystore/paopao-quiz.jks` 与密码 `android/keystore.properties` 均在 `.gitignore` 内，不入库。v1.7.2 起使用新签发的密钥（`CN=Paopao Quiz`，SHA-256 `a1593dbf…051a`）。
+
+发版顺序（`cap sync` **不会**清理旧 assets，必须先删再同步，否则套娃副本会一路带进 APK）：
+
+```bash
+node tools/build-www.js                       # 白名单生成 www/，同时核对版本号
+rm -rf android/app/src/main/assets/public     # 清掉上一次同步的残留
+npx cap sync android
+cd android && ./gradlew assembleRelease
+```
+
 ### v1.7.1（2026-10-22）
+
+> ⚠️ 本版的 Release 安装包构建时 `cap sync` 未生效，包内实际是 v1.7.0 内容，且签名密钥被误打包。已由 v1.7.2 取代，本版 APK 请勿安装。
 
 - 🧠 **MBTI 16型人格测试题库扩充**：从48题增至72题，每个维度18题；为16种人格类型新增丰富分析字段（特质、优势、盲点、工作风格、职业建议、人际关系、成长方向、压力应对）
 - 📚 **教资三科目官方样题套卷上线**：
@@ -146,6 +173,15 @@
 - 每个文件显示「未加载 / 有更新 / 已加载」状态（按文件内容 sha 判断，发布即更新）
 - **发布新题库**：把符合 [配置格式](#-题库配置文件格式) 的 JSON 上传到 `quizzes/` 目录即可（GitHub 网页端 Add file → Upload files 就行）。文件名可用 `展示名~文件名.json` 让 App 里显示更友好的名字，例如 `英语高频词~english-500.json`
 - 用户在 App 传送门里点「刷新列表」即可拿到最新题库
+- **临时下线某个题库**（不让用户检测到，但保留在仓库里随时可恢复）：把它的 JSON 从 `quizzes/` 移到 `quizzes-draft/`。因为「列表只列 `quizzes/` 目录」这条规则写在**已安装到用户手机里的 App** 里，改代码只影响升级后的版本，移走文件才是对所有旧版本立刻生效的唯一办法
+
+  ```bash
+  node tools/stage-bank.js hide  mbti-16personalities   # 下线
+  node tools/stage-bank.js show  mbti-16personalities   # 开放
+  node tools/stage-bank.js status                       # 两边各有什么
+  ```
+
+  已经导入过该题库的用户，本地数据不会被远程删除，只是无法再新增加载。
 
 ### 🔄 检查更新
 - 首页右上角 🔄 按钮，查询本仓库 GitHub Releases 的最新版本

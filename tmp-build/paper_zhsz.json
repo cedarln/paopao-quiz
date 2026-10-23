@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "key": "zonghe-suzhi-paper-1",
+  "key": "zhsz-zhongxue-paper-1",
   "name": "综合素质（中学）模拟卷 第1回",
   "icon": "📚",
   "category": "education",
@@ -427,9 +427,21 @@
     "passScore": 75,
     "description": "全卷150分。题型、题量、分值与时限参照高级中学教师资格科目一《综合素质》考试大纲编排，题目内容均为原创模拟。客观题部分统一判分，主观题交卷后对照参考答案自评。",
     "sections": [
-      { "name": "一、单项选择题（29题×2分，共58分）", "count": 29, "minutes": 45 },
-      { "name": "二、材料分析题（3题×14分，共42分）", "count": 3, "minutes": 30 },
-      { "name": "三、写作题（1题×50分，共50分）", "count": 1, "minutes": 45 }
+      {
+        "name": "一、单项选择题（29题×2分，共58分）",
+        "count": 29,
+        "minutes": 45
+      },
+      {
+        "name": "二、材料分析题（3题×14分，共42分）",
+        "count": 3,
+        "minutes": 30
+      },
+      {
+        "name": "三、写作题（1题×50分，共50分）",
+        "count": 1,
+        "minutes": 45
+      }
     ]
   }
 }
