@@ -1,8 +1,8 @@
-// 教资面试 · 道德与法治（道法/思政） 内置题库（60 题，全部主观题）
-// 由 quizzes/ms-daofa-zhengzhi.json 生成；改题请先改 quizzes/ 再重新生成，勿手改本文件
-// （旧版手写文件里 answerText 含真实换行，整个脚本 SyntaxError，题库因此在 App 里不可见）
+// 教资面试 · 道德与法治（道法/思政） —— 内置题库，由 tools/merge-banks.js 生成，不要手改
+// 题目字段整份 JSON 序列化：早先手写单引号时，answerText 里的真实换行
+// 会让整个脚本 SyntaxError，题库静默消失（页面不报错，只是首页少一张卡）
 window.QUIZ_DATA = window.QUIZ_DATA || {};
-window.QUIZ_DATA['ms-daofa-zhengzhi'] = {
+window.QUIZ_DATA["ms-daofa-zhengzhi"] = {
   "name": "教资面试 · 道德与法治（道法/思政）",
   "icon": "🎤",
   "description": "结构化问答、试讲、答辩真题风格训练题，含参考答案与评分要点",

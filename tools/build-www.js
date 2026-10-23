@@ -138,8 +138,60 @@ function checkScripts() {
   }
 }
 
+// 内置题库（js/data/*.js）与在线镜像（quizzes/）必须是同一份内容。
+// 这两份过去各改各的：内置文件被手写坏成 SyntaxError，页面不报错、只是首页少一张卡，
+// 而镜像一直是好的 —— 于是「线上有、装包里看不见」。这里在构建时硬核对。
+function checkBuiltinDrift() {
+  const dataDir = path.join(ROOT, 'js', 'data');
+  const quizDir = path.join(ROOT, 'quizzes');
+  if (!fs.existsSync(dataDir) || !fs.existsSync(quizDir)) return;
+
+  const mirrors = fs.readdirSync(quizDir).filter(f => f.endsWith('.json'));
+  const drift = [];
+  let checked = 0;
+
+  for (const f of fs.readdirSync(dataDir)) {
+    if (!f.endsWith('.js')) continue;
+    let key, bank;
+    try {
+      const win = {};
+      new vm.Script(fs.readFileSync(path.join(dataDir, f), 'utf8'), { filename: 'js/data/' + f })
+        .runInNewContext({ window: win });
+      key = Object.keys(win.QUIZ_DATA || {})[0];
+      bank = key && win.QUIZ_DATA[key];
+      if (!key || !bank) { drift.push(`js/data/${f} 没有给 window.QUIZ_DATA 赋值任何 key`); continue; }
+    } catch (e) {
+      drift.push(`js/data/${f} 无法解析：${e.message}`);
+      continue;
+    }
+    const mirror = mirrors.find(m => m.slice(0, -5).split('~').pop() === key || m.slice(0, -5) === key);
+    if (!mirror) { drift.push(`内置题库 ${key} 在 quizzes/ 里没有镜像，用户删除内置后无法找回`); continue; }
+    checked++;
+    let mb;
+    try { mb = JSON.parse(fs.readFileSync(path.join(quizDir, mirror), 'utf8')); }
+    catch (e) { drift.push(`quizzes/${mirror} 解析失败：${e.message}`); continue; }
+    if (JSON.stringify(bank.questions) !== JSON.stringify(mb.questions)) {
+      const a = bank.questions, b = mb.questions;
+      let where = `题量 内置 ${a.length} / 镜像 ${b.length}`;
+      for (let i = 0; i < Math.min(a.length, b.length); i++) {
+        if (JSON.stringify(a[i]) !== JSON.stringify(b[i])) { where = `第 ${i + 1} 题内容不同`; break; }
+      }
+      drift.push(`内置 js/data/${f} 与 quizzes/${mirror} 题目不一致（${where}）—— 改题请改源文件后跑 tools/merge-banks.js --only ${key}`);
+    }
+  }
+
+  if (drift.length) {
+    console.error('❌ 内置题库与在线镜像漂移：');
+    for (const d of drift) console.error('   ' + d);
+    process.exitCode = 1;
+  } else {
+    console.log(`内置/镜像一致性通过：${checked} 个内置题库都有镜像且题目相同`);
+  }
+}
+
 function main() {
   checkVersions();
+  checkBuiltinDrift();
 
   // 只清 www 自己，绝不碰仓库其它目录
   rmrf(OUT);
