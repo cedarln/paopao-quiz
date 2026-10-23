@@ -14,6 +14,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..');
 const OUT = path.join(ROOT, 'www');
@@ -88,6 +89,55 @@ function checkVersions() {
   }
 }
 
+// 内置题库是一堆 <script src="js/data/x.js"> 直接赋值，任何一个语法错误都会
+// 让那个文件整段不执行 —— 页面不报错、控制台以外看不出问题，症状只是首页少一张卡。
+// v1.7.2 就踩了这雷：js/data/ms-daofa.js 的 answerText 里有跨行真实换行，
+// 内置的教资面试题库从来没注册成功过。这里把「进包脚本」当发布物对待：
+// 1) 每个 .js 必须能通过语法解析；2) index.html 引用的脚本必须存在，
+//    存在的 js/data/*.js 也必须被引用（生成了却没挂脚本 = 等于没内置）。
+function checkScripts() {
+  const html = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');
+  const bad = [];
+  let checked = 0;
+
+  (function walk(dir) {
+    for (const entry of fs.readdirSync(dir)) {
+      const p = path.join(dir, entry);
+      if (fs.statSync(p).isDirectory()) { walk(p); continue; }
+      if (!entry.endsWith('.js')) continue;
+      checked++;
+      try {
+        new vm.Script(fs.readFileSync(p, 'utf8'), { filename: path.relative(OUT, p) });
+      } catch (e) {
+        bad.push(`语法错误 ${path.relative(OUT, p)}：${e.message}`);
+      }
+    }
+  })(path.join(OUT, 'js'));
+
+  const referenced = [...html.matchAll(/<script\s+[^>]*src="([^"]+)"/g)]
+    .map(m => m[1])
+    .filter(src => !/^https?:|^\/\//.test(src));
+  for (const src of referenced) {
+    if (!fs.existsSync(path.join(OUT, src))) bad.push(`index.html 引用了不存在的脚本：${src}`);
+  }
+
+  const dataDir = path.join(OUT, 'js', 'data');
+  if (fs.existsSync(dataDir)) {
+    for (const f of fs.readdirSync(dataDir)) {
+      if (!f.endsWith('.js')) continue;
+      if (!referenced.includes(`js/data/${f}`)) bad.push(`内置题库 js/data/${f} 没有被 index.html 引用，不会生效`);
+    }
+  }
+
+  if (bad.length) {
+    console.error('❌ 脚本自检未通过：');
+    for (const b of bad) console.error('   ' + b);
+    process.exitCode = 1;
+  } else {
+    console.log(`脚本自检通过：${checked} 个 .js 语法有效，index.html 引用 ${referenced.length} 个本地脚本`);
+  }
+}
+
 function main() {
   checkVersions();
 
@@ -132,6 +182,8 @@ function main() {
     process.exitCode = 1;
   }
 
+  checkScripts();
+
   console.log('www/ 构建完成：');
   let total = 0;
   for (const [name, bytes] of report) {
@@ -139,7 +191,10 @@ function main() {
     total += bytes;
   }
   console.log(`  ${'合计'.padEnd(15)} ${human(total)}`);
-  console.log('\n下一步：npx cap sync android（sync 不清理旧 assets，见下）');
+  console.log('\n下一步（本机没有独立 node/npx，capacitor 用 Electron 跑）：');
+  console.log('  rm -rf android/app/src/main/assets/public   # sync 只覆盖不清理，残留会进包');
+  console.log('  ELECTRON_RUN_AS_NODE=1 "/Applications/Qoder CN.app/Contents/MacOS/Qoder CN" \\');
+  console.log('    node_modules/@capacitor/cli/bin/capacitor sync android');
 }
 
 main();

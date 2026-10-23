@@ -18,10 +18,11 @@
 - 🪜 修复导入在线题库失败时报错弹窗被「传送门」界面遮挡的问题（所有 `.modal-overlay` 同为 `z-index:1000`，叠放次序只由 DOM 顺序决定），反馈类弹窗显式抬到 1200
 - 🔢 首页按钮（错题本 / 收藏夹 / 成就 / 回收站 / 传送门）的数字角标不再被截断：按钮为了水波纹效果设了 `overflow:hidden`，角标改用内侧角落 + 白色描边
 - 🧠 MBTI 的八块分析（核心特质 / 优势 / 盲点 / 工作风格 / 适合方向 / 人际关系 / 成长建议 / 压力应对）不再只有刚测完那一次能看到：首页「查看测试结果」走的是另一条渲染路径，之前整块空白，现在会从题库回取分析补齐。结果页被刷题 / 考试 / 套卷 / 测评 / 历史结果五个入口复用，测评分析区改由进页时统一清空，避免上一次的分析残留到考试结果上；题库被删或换版时取不到就干净留空，不显示错的内容
+- 🎤 内置的「教资面试 · 道德与法治（道法/思政）」之前在 App 里根本不出现：`js/data/ms-daofa.js` 的 `answerText` 里有跨行真实换行，整个脚本 `SyntaxError`，`window.QUIZ_DATA['ms-daofa-zhengzhi']` 从未注册成功（页面不报错，只是首页少一张卡）。现在改为从已上线且通过校验的 `quizzes/ms-daofa-zhengzhi.json` 生成，60 道主观题正常显示，作答与「题号总览」分组已实测
 - 📦 **安装包从 20.7 MB 降到 6.3 MB**：`www/` 过去是「整仓拷贝」，导致 `assets/public/` 里同时存在 22 MB 的 `www/www` 套娃副本、17 MB 没有任何代码读取的 `quizzes/` 镜像、以及 screenshots / samples / README。现在改为 `tools/build-www.js` 白名单构建，只装 `index.html`、`manifest.json`、`js/`、`css/`、`audio/`
 - 🔐 **签名密钥已轮换**（见下方「签名与发版」）。旧 v1.7.1 的 APK 里意外打包了 `keystore/paopao-quiz.jks`，新密钥签名的包无法覆盖安装旧包，**需要先卸载旧版本再装 1.7.2**
 - 🧪 补发上次漏发的内容：v1.7.1 的 Release 包实际是 v1.7.0 的内容（`cap sync` 失败后仍然构建了 APK），三个教资套卷与增强版 MBTI 到本版才真正进包 / 上线
-- 🛠 `APP_VERSION` 与 `build.gradle` 的 `versionName` 由 `tools/build-www.js` 每次构建自动核对，不一致直接报错退出
+- 🛠 `tools/build-www.js` 每次构建自动核对 `APP_VERSION` / `versionName` / `package.json version` 三处版本号，不一致直接报错退出；并对 `www/js` 下每个脚本做语法解析、检查 `index.html` 的脚本引用双向存在（内置题库文件没挂脚本 = 等于没内置），任何一条不过都非零退出
 
 #### 签名与发版
 
@@ -30,11 +31,17 @@
 发版顺序（`cap sync` **不会**清理旧 assets，必须先删再同步，否则套娃副本会一路带进 APK）：
 
 ```bash
-node tools/build-www.js                       # 白名单生成 www/，同时核对版本号
+ELECTRON_RUN_AS_NODE=1 "/Applications/Qoder CN.app/Contents/MacOS/Qoder CN" \
+  tools/build-www.js                          # 白名单生成 www/，核对版本号 + 脚本语法自检
 rm -rf android/app/src/main/assets/public     # 清掉上一次同步的残留
-npx cap sync android
-cd android && ./gradlew assembleRelease
+ELECTRON_RUN_AS_NODE=1 "/Applications/Qoder CN.app/Contents/MacOS/Qoder CN" \
+  node_modules/@capacitor/cli/bin/capacitor sync android
+cd android
+JAVA_HOME=/Users/linan/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home \
+  PATH="$JAVA_HOME/bin:$PATH" ./gradlew assembleRelease
 ```
+
+这台机器没有独立的 `node` / `npx`，`package.json` 里的 `npm run www` / `npm run sync` 跑不起来，请用上面的 Electron 形式（`build-www.js` 结尾也会打印同样一条）。
 
 ### v1.7.1（2026-10-22）
 
