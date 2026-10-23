@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const LIVE = path.join(ROOT, 'quizzes');
@@ -39,10 +40,33 @@ function needGitMove() {
   catch (e) { return false; }
 }
 
+// 文件名里有中文、空格、括号和 ~，一律用 execFileSync 传参数数组，不拼 shell 字符串：
+// 既不会被这些字符咬到，也不会把文件名当命令执行。
+function isTracked(rel) {
+  try {
+    execFileSync('git', ['ls-files', '--error-unmatch', '--', rel], { cwd: ROOT, stdio: 'ignore' });
+    return true;
+  } catch (e) { return false; }
+}
+
 function move(from, to) {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   if (fs.existsSync(to)) throw new Error(`目标已存在同名文件：${path.relative(ROOT, to)}`);
+  const relFrom = path.relative(ROOT, from);
+  const relTo = path.relative(ROOT, to);
+
+  // 已跟踪就交给 git mv，一步同时挪工作区和索引，历史按 rename 延续。
+  // 先 renameSync 再补 git add 是不行的：那时源路径既不在磁盘也不在索引里，
+  // `git add 源路径` 会 pathspec did not match 直接作废整条命令，目标文件反而漏加。
+  if (needGitMove() && isTracked(relFrom)) {
+    execFileSync('git', ['mv', '--', relFrom, relTo], { cwd: ROOT });
+    return;
+  }
   fs.renameSync(from, to);
+  if (needGitMove()) {
+    try { execFileSync('git', ['add', '--', relTo], { cwd: ROOT, stdio: 'ignore' }); }
+    catch (e) { /* 目标被 .gitignore 挡住时不阻塞搬文件 */ }
+  }
 }
 
 function status() {
@@ -89,15 +113,6 @@ function main() {
   const absTo = path.join(toDir, file);
 
   move(absFrom, absTo);
-
-  // 交给 git 认成 rename，避免历史断裂；未跟踪文件 rename 本身就是移动，不用管
-  if (needGitMove()) {
-    const { execSync } = require('child_process');
-    try {
-      execSync(`git rm --cached --ignore-unmatch -- "${path.relative(ROOT, absFrom)}" >/dev/null 2>&1`);
-      execSync(`git add -- "${path.relative(ROOT, absTo)}" "${path.relative(ROOT, absFrom)}"`);
-    } catch (e) { /* 未跟踪时正常失败，忽略 */ }
-  }
 
   console.log(`${cmd === 'hide' ? '🔒 已下线' : '🔓 已开放'}：${file}`);
   console.log(`   ${path.basename(fromDir)}/ → ${path.basename(toDir)}/`);
