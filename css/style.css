@@ -3601,6 +3601,16 @@ body.custom-bg::before {
 .lyric-line.female .lyric-speaker { color: #ec4899; }
 .lyric-reading { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; line-height: 1.5; }
 .lyric-text { font-size: 17px; line-height: 2.0; color: var(--text-primary); font-weight: 500; }
+.lyric-roman {
+  font-size: 12.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.6;
+  letter-spacing: .015em;
+}
+.lyric-harmony {
+  font-size: 11.5px; color: var(--text-muted); margin-top: 2px; line-height: 1.6;
+  letter-spacing: .02em; opacity: .9;
+}
+.lyric-line.current .lyric-roman,
+.lyric-line.current .lyric-harmony { color: rgba(255,255,255,.72) !important; }
 .lyric-zh { font-size: 13px; color: var(--text-secondary); margin-top: 5px; line-height: 1.5; }
 .lyric-note {
   font-size: 12px; color: var(--text-muted); margin-top: 7px; line-height: 1.55;
@@ -3627,6 +3637,8 @@ body.custom-bg::before {
   letter-spacing: 0; line-height: 1; user-select: none; -webkit-user-select: none;
 }
 .lyric-line.current .lyric-word rt { color: rgba(255, 255, 255, .72); }
+/* 韩语：罗马字不挂 ruby，按整句放在原文下方 */
+.lyrics-lines.lang-ko .lyric-text { letter-spacing: .01em; }
 /* 分词空格：用外边距而不是真实空格字符，原句与点词坐标都不变 */
 .lyrics-lines.spaced .lyric-word,
 .lyrics-lines.spaced-bunsetsu .lyric-word { margin-right: .34em; }
