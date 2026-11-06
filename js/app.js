@@ -4026,7 +4026,7 @@
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
   // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
   // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
-  const APP_VERSION = '1.8.1';
+  const APP_VERSION = '1.8.2';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -4858,13 +4858,139 @@
     renderLyricsList();
   }
 
+  // ---------- 排版：汉字注音 / 分词空格 ----------
+  // token 已是单词级且自带 reading，所以注音和空格都能纯前端做，不需要改歌词 JSON。
+  const LYRICS_DISPLAY_KEY = 'lyrics-display';
+  const KANJI_CHAR_RE = /[\u4e00-\u9fff\u3005\u3007]/;
+  const LYRIC_PARTICLE_POS = ['助詞', '助動詞', '終助詞'];
+  const lyricsDisplay = { ruby: 'kanji', gap: 'word', dim: true };
+
+  function loadLyricsDisplay() {
+    try {
+      const raw = localStorage.getItem(LYRICS_DISPLAY_KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw) || {};
+      if (d.ruby === 'kanji' || d.ruby === 'line' || d.ruby === 'off') lyricsDisplay.ruby = d.ruby;
+      if (d.gap === 'word' || d.gap === 'bunsetsu' || d.gap === 'none') lyricsDisplay.gap = d.gap;
+      if (typeof d.dim === 'boolean') lyricsDisplay.dim = d.dim;
+    } catch (e) {}
+  }
+  function saveLyricsDisplay() {
+    try { localStorage.setItem(LYRICS_DISPLAY_KEY, JSON.stringify(lyricsDisplay)); } catch (e) {}
+  }
+  function syncLyricsDisplayUI() {
+    const setSeg = (id, v) => {
+      const box = $(id);
+      if (!box) return;
+      box.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.v === v));
+    };
+    setSeg('lds-ruby', lyricsDisplay.ruby);
+    setSeg('lds-gap', lyricsDisplay.gap);
+    const dim = $('lds-dim');
+    if (dim) dim.checked = !!lyricsDisplay.dim;
+  }
+  function applyLyricsDisplay() {
+    const box = $('lyrics-lines');
+    if (box) {
+      box.classList.toggle('ruby-on', lyricsDisplay.ruby === 'kanji');
+      box.classList.toggle('spaced', lyricsDisplay.gap === 'word');
+      box.classList.toggle('spaced-bunsetsu', lyricsDisplay.gap === 'bunsetsu');
+      box.classList.toggle('dim-particles', !!lyricsDisplay.dim);
+    }
+    syncLyricsDisplayUI();
+  }
+  function setLyricsDisplay(patch) {
+    Object.assign(lyricsDisplay, patch);
+    saveLyricsDisplay();
+    applyLyricsDisplay();
+    renderLyricsLines();
+    if (lyricsState.currentLineN != null) highlightLine(lyricsState.currentLineN);
+  }
+
+  // 把词拆成「汉字块 / 假名块」，再用假名块当锚点把整词读音分给汉字块。
+  function lyricSurfaceRuns(s) {
+    const out = [];
+    for (const ch of s) {
+      const k = KANJI_CHAR_RE.test(ch);
+      if (!out.length || out[out.length - 1].k !== k) out.push({ k, t: ch });
+      else out[out.length - 1].t += ch;
+    }
+    return out;
+  }
+  function wholeTokenRuby(surface, reading) {
+    // 数字+量词（5人→ごにん）等切不准的组合：整块注音，保证读音正确
+    return { pieces: [{ text: surface, ruby: reading, kanji: true }] };
+  }
+  function alignTokenRuby(t) {
+    const surface = t.surface || '';
+    const reading = t.reading || '';
+    // 数据里显式给了逐块注音（人工校正的例外）时优先用
+    if (Array.isArray(t.ruby) && t.ruby.length) {
+      return { pieces: t.ruby.map(x => ({ text: x.s || '', ruby: x.r || '', kanji: true })) };
+    }
+    const rs = lyricSurfaceRuns(surface);
+    const kanjiRuns = rs.filter(r => r.k);
+    if (!kanjiRuns.length) return { pieces: rs.map(r => ({ text: r.t, ruby: '', kanji: false })) };
+    if (!reading) return { pieces: rs.map(r => ({ text: r.t, ruby: '', kanji: r.k })) };
+
+    let rest = reading;
+    if (!rs[0].k) {
+      if (!rest.startsWith(rs[0].t)) return wholeTokenRuby(surface, reading);
+      rest = rest.slice(rs[0].t.length);
+    }
+    const last = rs[rs.length - 1];
+    if (!last.k) {
+      if (!rest.endsWith(last.t)) return wholeTokenRuby(surface, reading);
+      rest = rest.slice(0, -last.t.length);
+    }
+    if (!rest) return wholeTokenRuby(surface, reading);
+
+    let readings;
+    if (kanjiRuns.length === 1) {
+      readings = [rest];
+    } else {
+      readings = [];
+      let cursor = 0;
+      for (let i = 0; i < kanjiRuns.length; i++) {
+        if (i === kanjiRuns.length - 1) { readings.push(rest.slice(cursor)); break; }
+        const idx = rs.indexOf(kanjiRuns[i]);
+        const between = (rs[idx + 1] && !rs[idx + 1].k) ? rs[idx + 1].t : '';
+        if (!between) return wholeTokenRuby(surface, reading);
+        const pos = rest.indexOf(between, cursor);
+        if (pos < 0) return wholeTokenRuby(surface, reading);
+        readings.push(rest.slice(cursor, pos));
+        cursor = pos + between.length;
+      }
+      if (readings.some(r => !r)) return wholeTokenRuby(surface, reading);
+    }
+
+    let ki = 0;
+    return { pieces: rs.map(r => r.k
+      ? { text: r.t, ruby: readings[ki++], kanji: true }
+      : { text: r.t, ruby: '', kanji: false }) };
+  }
+
   // ---------- 渲染歌词行 ----------
   function wordSpan(t, ti, L) {
     const hg = (t.grammar && t.grammar.length) ? ' has-grammar' : '';
     // rtl 既可能标在 token 上，也可能只标在整句上（如阿拉伯语名字句），两者都要生效
     const rtl = (t.rtl || L.rtl) ? ' rtl' : '';
-    return '<span class="lyric-word' + hg + rtl + '" data-line="' + L.n + '" data-ti="' + ti + '">'
-      + escapeHtml(t.surface) + '</span>';
+    const isPart = LYRIC_PARTICLE_POS.indexOf(t.pos) !== -1;
+    const next = (L.tokens || [])[ti + 1];
+    // 文节模式：下一个词是助词/助动词时，空格贴到助词之后
+    const glue = !!(next && LYRIC_PARTICLE_POS.indexOf(next.pos) !== -1);
+    let inner;
+    if (lyricsDisplay.ruby === 'kanji') {
+      inner = alignTokenRuby(t).pieces.map(p => (p.kanji && p.ruby)
+        ? '<ruby>' + escapeHtml(p.text) + '<rt>' + escapeHtml(p.ruby) + '</rt></ruby>'
+        : escapeHtml(p.text)).join('');
+    } else {
+      inner = escapeHtml(t.surface);
+    }
+    return '<span class="lyric-word' + hg + rtl
+      + (isPart ? ' particle' : '') + (glue ? ' glue' : '')
+      + '" data-line="' + L.n + '" data-ti="' + ti + '">'
+      + inner + '</span>';
   }
   // 按 token 顺序平铺原句 text，保留 token 之间的原始字符（如名字串烧里的空格），
   // 每个 token 渲染成可点 span。若 token 无法按序匹配 text，整句降级为不可点纯文本。
@@ -4904,13 +5030,14 @@
       let h = '<div class="lyric-line ' + gender + barrage + '" data-n="' + L.n + '">';
       h += '<div class="lyric-bubble">';
       h += '<div class="lyric-speaker">' + spk + ' ' + inferred + '</div>';
-      if (L.reading) h += '<div class="lyric-reading">' + escapeHtml(L.reading) + '</div>';
+      if (L.reading && lyricsDisplay.ruby === 'line') h += '<div class="lyric-reading">' + escapeHtml(L.reading) + '</div>';
       h += '<div class="lyric-text' + rtlLine + '">' + buildWordsHtml(L) + '</div>';
       if (L.zh) h += '<div class="lyric-zh">' + escapeHtml(L.zh) + '</div>';
       if (L.note) h += '<div class="lyric-note">💡 ' + escapeHtml(L.note) + '</div>';
       h += '</div></div>';
       return h;
     }).join('');
+    applyLyricsDisplay();
   }
 
   // ---------- 时间轴 / 当前句高亮 ----------
@@ -5117,6 +5244,25 @@
     });
     $('lyrics-lib-back').addEventListener('click', () => showPage('home'));
     $('lyrics-reader-back').addEventListener('click', () => closeLyricsReader());
+
+    // 排版设置（注音 / 空格 / 助词变浅）
+    loadLyricsDisplay();
+    $('lyrics-display-btn').addEventListener('click', () => {
+      syncLyricsDisplayUI();
+      $('lyrics-display-sheet').style.display = 'flex';
+    });
+    $('lyrics-display-close').addEventListener('click', () => { $('lyrics-display-sheet').style.display = 'none'; });
+    $('lyrics-display-sheet').addEventListener('click', e => {
+      if (e.target.id === 'lyrics-display-sheet') $('lyrics-display-sheet').style.display = 'none';
+    });
+    ['lds-ruby', 'lds-gap'].forEach(id => {
+      $(id).addEventListener('click', e => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        setLyricsDisplay(id === 'lds-ruby' ? { ruby: b.dataset.v } : { gap: b.dataset.v });
+      });
+    });
+    $('lds-dim').addEventListener('change', e => setLyricsDisplay({ dim: e.target.checked }));
 
     // 导入 / 说明（导入复用全局 file-input，由 handleImportFile 嗅探 schema 分流）
     $('lyrics-import-btn').addEventListener('click', () => $('file-input').click());

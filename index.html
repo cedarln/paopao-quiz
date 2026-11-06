@@ -386,6 +386,7 @@
             <div id="lyrics-song-title" class="lyrics-song-title">歌名</div>
             <div id="lyrics-song-sub" class="lyrics-song-sub">作者</div>
           </div>
+          <button id="lyrics-display-btn" class="lyrics-icon-btn lyrics-aa-btn" title="排版设置：注音 / 空格">Aa</button>
           <button id="lyrics-audio-btn" class="lyrics-icon-btn" title="选择本地音频（精听）">🎧</button>
         </header>
 
@@ -424,6 +425,34 @@
         </div>
 
         <audio id="lyrics-audio-el" style="display:none;"></audio>
+      </div>
+
+      <!-- 排版设置：汉字注音 / 分词空格（底部弹出，仅影响显示） -->
+      <div id="lyrics-display-sheet" class="modal-overlay lyrics-display-sheet" style="display:none;">
+        <div class="lyrics-display-panel">
+          <div class="lds-head">
+            <h3 class="modal-title">排版设置</h3>
+            <button class="recycle-close" id="lyrics-display-close">✕</button>
+          </div>
+          <div class="lds-row">
+            <span class="lds-label">注音</span>
+            <div class="lds-seg" id="lds-ruby">
+              <button data-v="kanji">仅汉字 · 假名</button>
+              <button data-v="line">整句读音</button>
+              <button data-v="off">关闭</button>
+            </div>
+          </div>
+          <div class="lds-row">
+            <span class="lds-label">空格</span>
+            <div class="lds-seg" id="lds-gap">
+              <button data-v="word">单词之间</button>
+              <button data-v="bunsetsu">文节之间</button>
+              <button data-v="none">不加</button>
+            </div>
+          </div>
+          <label class="lds-check"><input type="checkbox" id="lds-dim"> 助词变浅（结构更清楚）</label>
+          <p class="lds-tip">空格只是显示间隔，不改变原句；点词解析不受影响。设置会记住。</p>
+        </div>
       </div>
     </section>
   </div>
@@ -478,6 +507,7 @@
           <li><b>精听</b>：点右上角 🎧 选这首歌的本地音频，播放时按时间戳自动高亮当前句。</li>
           <li><b>语法卡片</b>：左右翻卡，过一遍全曲语法点（含 JLPT 等级与例句行号）。</li>
         </ul>
+        <p><b>排版</b>：右上角 <b>Aa</b> 可切换注音方式（仅汉字 ruby / 整句读音 / 关闭）、词间空格（单词 / 文节）和助词变浅，设置会记住。</p>
         <p><b>版权</b>：歌词版权归原作者。本功能仅供个人学习，请勿公开分发歌词文件或音频。</p>
       </div>
       <div class="recycle-modal-footer">
