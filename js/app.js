@@ -4863,7 +4863,7 @@
   const LYRICS_DISPLAY_KEY = 'lyrics-display';
   const KANJI_CHAR_RE = /[\u4e00-\u9fff\u3005\u3007]/;
   const LYRIC_PARTICLE_POS = ['助詞', '助動詞', '終助詞'];
-  const lyricsDisplay = { ruby: 'kanji', gap: 'word', dim: true };
+  const lyricsDisplay = { ruby: 'kanji', gap: 'word', dim: true, harmony: true };
 
   function loadLyricsDisplay() {
     try {
@@ -4873,10 +4873,15 @@
       if (d.ruby === 'kanji' || d.ruby === 'line' || d.ruby === 'off') lyricsDisplay.ruby = d.ruby;
       if (d.gap === 'word' || d.gap === 'bunsetsu' || d.gap === 'none') lyricsDisplay.gap = d.gap;
       if (typeof d.dim === 'boolean') lyricsDisplay.dim = d.dim;
+      if (typeof d.harmony === 'boolean') lyricsDisplay.harmony = d.harmony;
     } catch (e) {}
   }
   function saveLyricsDisplay() {
     try { localStorage.setItem(LYRICS_DISPLAY_KEY, JSON.stringify(lyricsDisplay)); } catch (e) {}
+  }
+  function lyricsLang(doc) {
+    const d = doc || lyricsState.current;
+    return (d && d.meta && d.meta.lang) || 'ja';
   }
   function syncLyricsDisplayUI() {
     const setSeg = (id, v) => {
@@ -4886,16 +4891,43 @@
     };
     setSeg('lds-ruby', lyricsDisplay.ruby);
     setSeg('lds-gap', lyricsDisplay.gap);
+    const ko = lyricsLang() === 'ko';
+    // 注音按钮的文案随语言切换：日语是汉字假名，韩语是整句罗马字
+    const rubyBox = $('lds-ruby');
+    if (rubyBox) {
+      const labels = ko ? ['罗马字', '整句罗马字', '关闭'] : ['仅汉字 · 假名', '整句读音', '关闭'];
+      rubyBox.querySelectorAll('button').forEach((b, i) => {
+        if (labels[i]) b.textContent = labels[i];
+        // 韩语只有「罗马字 / 关闭」两档，中间那档对日语才有意义
+        b.style.display = (ko && i === 1) ? 'none' : '';
+      });
+    }
+    const gapBox = $('lds-gap');
+    if (gapBox) {
+      const labels = ko ? ['单词之间', '词组之间', '不加'] : ['单词之间', '文节之间', '不加'];
+      gapBox.querySelectorAll('button').forEach((b, i) => {
+        if (labels[i]) b.textContent = labels[i];
+        b.style.display = (ko && i === 1) ? 'none' : '';
+      });
+    }
     const dim = $('lds-dim');
     if (dim) dim.checked = !!lyricsDisplay.dim;
+    const harmonyRow = $('lds-harmony-row');
+    if (harmonyRow) harmonyRow.style.display = ko ? '' : 'none';
+    const harmony = $('lds-harmony');
+    if (harmony) harmony.checked = !!lyricsDisplay.harmony;
   }
   function applyLyricsDisplay() {
     const box = $('lyrics-lines');
     if (box) {
-      box.classList.toggle('ruby-on', lyricsDisplay.ruby === 'kanji');
+      const ko = lyricsLang() === 'ko';
+      // 韩语不走汉字 ruby：罗马字作为整句读音放在原句下面，读起来更清楚
+      box.classList.toggle('ruby-on', lyricsDisplay.ruby === 'kanji' && !ko);
       box.classList.toggle('spaced', lyricsDisplay.gap === 'word');
       box.classList.toggle('spaced-bunsetsu', lyricsDisplay.gap === 'bunsetsu');
       box.classList.toggle('dim-particles', !!lyricsDisplay.dim);
+      box.classList.toggle('lang-ko', ko);
+      box.classList.toggle('harmony-on', !!lyricsDisplay.harmony);
     }
     syncLyricsDisplayUI();
   }
@@ -5030,8 +5062,12 @@
       let h = '<div class="lyric-line ' + gender + barrage + '" data-n="' + L.n + '">';
       h += '<div class="lyric-bubble">';
       h += '<div class="lyric-speaker">' + spk + ' ' + inferred + '</div>';
-      if (L.reading && lyricsDisplay.ruby === 'line') h += '<div class="lyric-reading">' + escapeHtml(L.reading) + '</div>';
+      const ko = lyricsLang(doc) === 'ko';
+      if (!ko && L.reading && lyricsDisplay.ruby === 'line') h += '<div class="lyric-reading">' + escapeHtml(L.reading) + '</div>';
       h += '<div class="lyric-text' + rtlLine + '">' + buildWordsHtml(L) + '</div>';
+      if (ko && L.reading && lyricsDisplay.ruby !== 'off') h += '<div class="lyric-roman">' + escapeHtml(L.reading) + '</div>';
+      // 韩语跟唱辅助：中文谐音（可关），只在数据带 harmony 时出现
+      if (L.harmony && lyricsDisplay.harmony) h += '<div class="lyric-harmony">' + escapeHtml(L.harmony) + '</div>';
       if (L.zh) h += '<div class="lyric-zh">' + escapeHtml(L.zh) + '</div>';
       if (L.note) h += '<div class="lyric-note">💡 ' + escapeHtml(L.note) + '</div>';
       h += '</div></div>';
@@ -5263,6 +5299,8 @@
       });
     });
     $('lds-dim').addEventListener('change', e => setLyricsDisplay({ dim: e.target.checked }));
+    const harmonyBox = $('lds-harmony');
+    if (harmonyBox) harmonyBox.addEventListener('change', e => setLyricsDisplay({ harmony: e.target.checked }));
 
     // 导入 / 说明（导入复用全局 file-input，由 handleImportFile 嗅探 schema 分流）
     $('lyrics-import-btn').addEventListener('click', () => $('file-input').click());
