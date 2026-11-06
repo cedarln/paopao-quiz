@@ -104,6 +104,15 @@
     }));
   }
 
+  function idbDelete(key) {
+    return openIdb().then(db => new Promise((resolve, reject) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    }));
+  }
+
   // ===== 成就系统 =====
   // type: 答题/连击/等级/打卡/综合  | progress: { current, target } 或 null（无进度条）
   const ACHIEVEMENTS = [
@@ -2863,6 +2872,9 @@
   // 处理文件导入
   function handleImportFile(file) {
     if (!file) return;
+    // 歌曲包（.zip：歌词 JSON + 音频）走独立解包通道
+    const fname = (file.name || '').toLowerCase();
+    if (fname.endsWith('.zip') || /zip/.test(file.type || '')) { handleLyricsPackZip(file); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -4014,7 +4026,7 @@
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
   // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
   // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
-  const APP_VERSION = '1.8.0';
+  const APP_VERSION = '1.8.1';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -4658,7 +4670,78 @@
     if (badge) { badge.textContent = String(n); badge.style.display = n ? '' : 'none'; }
   }
 
+  // ---------- 歌词音频持久化 ----------
+  // 与听力音频缓存（audio 库、会被 LRU 逐出）分开：歌词音频存 kv 库、
+  // 按歌曲 key 定制，删歌词时一起删，不参与逐出，重启后能自动恢复。
+  const IDB_LYRICS_AUDIO_PREFIX = 'lyrics-audio:';
+  function saveLyricsAudioBlob(key, blob, mime, name) {
+    const rec = { blob, mime: mime || blob.type || '', name: name || '', bytes: blob.size || 0, savedAt: Date.now() };
+    return idbSet(IDB_LYRICS_AUDIO_PREFIX + key, rec).catch(e => { console.warn('歌词音频保存失败', e); });
+  }
+  function loadLyricsAudioBlob(key) {
+    return idbGet(IDB_LYRICS_AUDIO_PREFIX + key).catch(() => null);
+  }
+  function deleteLyricsAudioBlob(key) {
+    return idbDelete(IDB_LYRICS_AUDIO_PREFIX + key).catch(() => {});
+  }
+  function guessAudioMime(name) {
+    const n = (name || '').toLowerCase();
+    if (n.endsWith('.mp3')) return 'audio/mpeg';
+    if (n.endsWith('.m4a')) return 'audio/mp4';
+    if (n.endsWith('.aac')) return 'audio/aac';
+    if (n.endsWith('.ogg') || n.endsWith('.opus')) return 'audio/ogg';
+    if (n.endsWith('.wav')) return 'audio/wav';
+    if (n.endsWith('.flac')) return 'audio/flac';
+    return '';
+  }
+
   // ---------- 导入 ----------
+  // 歌曲包 zip：内部可含一个 lyrics-annotated/1 的 .json + 一个音频文件（mp3/m4a/…）。
+  // 解包后歌词走 handleLyricsImport，音频存 IndexedDB 持久化并随即载入播放器。
+  function handleLyricsPackZip(file) {
+    if (typeof JSZip === 'undefined') { showResultModal(false, 'zip 解包组件未加载，请改用歌词 JSON 单独导入'); return; }
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const zip = await JSZip.loadAsync(e.target.result);
+        const names = Object.keys(zip.files).filter(n => !zip.files[n].dir);
+        let lyricsDoc = null, audioBlob = null, audioName = '';
+        for (const n of names) {
+          const lower = n.toLowerCase();
+          if (!audioBlob && /\.(mp3|m4a|aac|ogg|opus|wav|flac)$/.test(lower)) {
+            audioBlob = await zip.files[n].async('blob');
+            audioName = n.split('/').pop();
+          } else if (!lyricsDoc && lower.endsWith('.json')) {
+            try {
+              const txt = await zip.files[n].async('text');
+              const d = JSON.parse(txt);
+              if (isLyricsDoc(d)) lyricsDoc = d;
+            } catch (_) { /* 跳过非歌词 json */ }
+          }
+        }
+        if (!lyricsDoc) { showResultModal(false, '歌曲包里没有找到 lyrics-annotated/1 歌词 JSON'); return; }
+        const key = lyricsKeyOf(lyricsDoc);
+        const isNew = !lyricsState.lib[key];
+        lyricsState.lib[key] = lyricsDoc;
+        saveLyricsLib();
+        renderLyricsList();
+        if (audioBlob) {
+          const mime = guessAudioMime(audioName) || audioBlob.type || '';
+          await saveLyricsAudioBlob(key, audioBlob, mime, audioName);
+        }
+        const m = lyricsDoc.meta || {};
+        const title = m.songTitle || m.songTitleZh || key;
+        showResultModal(true, `${isNew ? '成功导入' : '已更新'}歌曲包《${title}》`
+          + (audioBlob ? `（含音频 ${audioName}）` : '（未含音频，可稍后单独选择）'));
+      } catch (err) {
+        console.error(err);
+        showResultModal(false, 'zip 解包失败：' + (err && err.message ? err.message : '文件损坏或格式不支持'));
+      }
+    };
+    reader.onerror = () => showResultModal(false, '文件读取失败，请重试');
+    reader.readAsArrayBuffer(file);
+  }
+
   function handleLyricsImport(doc) {
     if (!Array.isArray(doc.lines) || !doc.lines.length) {
       showResultModal(false, '歌词文件没有 lines 数据，无法导入');
@@ -4713,6 +4796,7 @@
     const title = (d.meta && (d.meta.songTitle || d.meta.songTitleZh)) || key;
     if (!window.confirm('删除歌词《' + title + '》？此操作不可恢复。')) return;
     delete lyricsState.lib[key];
+    deleteLyricsAudioBlob(key);
     saveLyricsLib();
     renderLyricsList();
     showToast('已删除');
@@ -4746,6 +4830,22 @@
     $('lyrics-reader').style.display = 'flex';
     showPage('lyrics');
     setLyricsMode('read');
+
+    // 若这首歌持久化过音频（来自 zip 歌曲包或上次手动选择），自动载入，重启后无需重选
+    loadLyricsAudioBlob(key).then(rec => {
+      if (!rec || !rec.blob) return;
+      if (lyricsState.currentKey !== key || !lyricsState.current) return;
+      const url = URL.createObjectURL(rec.blob);
+      const audio = $('lyrics-audio-el');
+      if (!audio) return;
+      audio.src = url;
+      lyricsState.audioUrl = url;
+      lyricsState.audioLoaded = true;
+      const btn = $('lyrics-audio-btn');
+      if (btn) btn.textContent = '▶';
+      const hint = $('lyrics-audio-hint');
+      if (hint) hint.style.display = 'none';
+    });
   }
 
   function closeLyricsReader() {
@@ -4899,6 +4999,10 @@
       if (hint) hint.style.display = 'none';
     }
     audio.play().catch(() => showToast('音频已载入，点 ▶ 播放'));
+    // 持久化：下次打开这首歌词自动载入，重启 App 也不用重选
+    if (lyricsState.currentKey && file instanceof Blob) {
+      saveLyricsAudioBlob(lyricsState.currentKey, file, file.type, file.name);
+    }
   }
 
   function toggleLyricsAudio() {

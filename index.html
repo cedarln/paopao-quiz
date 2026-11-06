@@ -366,14 +366,14 @@
             <div class="action-row">
               <button id="lyrics-import-btn" class="import-btn">
                 <span class="import-icon">📥</span>
-                <span>导入歌词 JSON</span>
+                <span>导入歌曲包 / JSON</span>
               </button>
               <button id="lyrics-help-btn" class="import-btn recycle-btn">
                 <span class="import-icon">❓</span>
                 <span>使用说明</span>
               </button>
             </div>
-            <p class="import-tip">歌词文件需为 lyrics-annotated/1 格式，仅保存在本机。</p>
+            <p class="import-tip">支持歌词 JSON（lyrics-annotated/1）或含歌词+音频的 zip 歌曲包，仅保存在本机。</p>
           </div>
         </main>
       </div>
@@ -448,7 +448,7 @@
   </div>
 
   <!-- 导入文件选择器（隐藏） -->
-  <input type="file" id="file-input" accept=".json,application/json" style="display:none;">
+  <input type="file" id="file-input" accept=".json,application/json,.zip,application/zip" style="display:none;">
 
   <!-- 歌词精读：音频文件选择器（隐藏，精听模式用，仅本机播放） -->
   <input type="file" id="lyrics-audio-input" accept="audio/*" style="display:none;">
@@ -470,7 +470,8 @@
       </div>
       <div class="lyrics-help-text">
         <p><b>这是什么</b>：把一首日语歌做成逐句精读材料。每句配假名读音、中文翻译，点任意词看词性/释义/语法，另有「语法卡片」汇总全曲语法点。</p>
-        <p><b>数据从哪来</b>：歌词是受版权保护的作品，不随 App 分发。你需要自己准备 <code>lyrics-annotated/1</code> 格式的 JSON 文件，点「导入歌词 JSON」加载。文件只存在本机，不上传。</p>
+        <p><b>数据从哪来</b>：歌词是受版权保护的作品，不随 App 分发。你需要自己准备 <code>lyrics-annotated/1</code> 格式的 JSON 文件，点「导入歌曲包 / JSON」加载。文件只存在本机，不上传。</p>
+        <p><b>歌曲包（推荐）</b>：也可以导入一个 zip，里面放歌词 JSON + 这首歌的音频（mp3/m4a 等）。一次导入，歌词和音频一起就位，音频会持久保存，下次打开不用重选。</p>
         <p><b>三种模式</b>：</p>
         <ul>
           <li><b>精读</b>：对唱气泡逐句展示，点词查解析，拖时间轴定位。</li>
@@ -706,6 +707,8 @@
   <script src="js/data/jyzn-zhongxue.js"></script>
   <script src="js/data/xk-zhengzhi.js"></script>
   <script src="js/data/ms-daofa.js"></script>
+  <!-- zip 解包（歌曲包导入用，本地引入不走 CDN） -->
+  <script src="js/vendor/jszip.min.js"></script>
   <!-- 主逻辑 -->
   <script src="js/app.js"></script>
 </body>
