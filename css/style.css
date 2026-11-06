@@ -3584,6 +3584,33 @@ body.custom-bg::before {
   flex-shrink: 0;
 }
 
+/* 精听：盲听工具条（先听再看，逐句揭示） */
+.lyrics-listen-bar {
+  margin: 8px 14px 0; padding: 10px 12px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: 12px; flex-shrink: 0;
+}
+.llb-tip { font-size: 11.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 7px; }
+.llb-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; color: var(--text-muted); margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.llb-badge {
+  padding: 2px 8px; border-radius: 999px; font-weight: 700; font-size: 11px;
+  background: rgba(79,70,229,.12); color: var(--primary);
+}
+.llb-badge.open { background: rgba(34,197,94,.14); color: #16a34a; }
+.llb-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.llb-btn {
+  flex: 1; min-width: 68px; padding: 7px 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--text-secondary); border-radius: 9px;
+  font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s;
+}
+.llb-btn:active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.llb-btn.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+
 /* 歌词滚动区 */
 .lyrics-scroll {
   flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -3640,6 +3667,18 @@ body.custom-bg::before {
   border-top: 1px dashed var(--border); padding-top: 7px;
 }
 .lyric-line.current .lyric-note { color: rgba(255,255,255,.8); border-top-color: rgba(255,255,255,.3); }
+
+/* 盲听：未揭示的句子只留原文，假名/罗马字/谐音/翻译/讲解全部藏起来 */
+.lyrics-lines.blind .lyric-line:not(.revealed) .lyric-reading,
+.lyrics-lines.blind .lyric-line:not(.revealed) .lyric-roman,
+.lyrics-lines.blind .lyric-line:not(.revealed) .lyric-harmony,
+.lyrics-lines.blind .lyric-line:not(.revealed) .lyric-zh,
+.lyrics-lines.blind .lyric-line:not(.revealed) .lyric-note { display: none; }
+/* 汉字上的假名注音也是答案，盲听时一起收起来（行高跟着收回，不然留一大截空白） */
+.lyrics-lines.blind .lyric-line:not(.revealed) rt { display: none; }
+.lyrics-lines.blind.ruby-on .lyric-line:not(.revealed) .lyric-text { line-height: 2.0; }
+.lyrics-lines.blind .lyric-line:not(.revealed) .lyric-bubble { padding-bottom: 9px; }
+.lyrics-lines.blind .lyric-line.revealed .lyric-bubble { box-shadow: inset 3px 0 0 #10b981; }
 
 /* 可点词 */
 .lyric-word {

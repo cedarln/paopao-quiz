@@ -4625,6 +4625,10 @@
     currentLineN: null, // 当前高亮行号
     lastScrollN: null,  // 上次自动滚动到的行，避免重复滚
     offset: 0,          // 歌词整体时间偏移（秒），正数=延后
+    // 精听 = 盲听：先听再看，逐句揭示（只在本次打开累计，重开重新盲听）
+    revealed: new Set(),// 已揭示的行号
+    revealAll: false,   // 全曲揭示（按歌曲记住，可再关回盲听）
+    loopLine: false,    // 本句循环（按歌曲记住）
     audioLoaded: false,
     audioUrl: null
   };
@@ -4715,6 +4719,154 @@
       ? (audio.currentTime || 0)
       : (parseFloat($('lyrics-scrubber').value) || 0);
     applyTime(t);
+  }
+
+  // ---------- 精听：盲听（先听再看，逐句揭示） ----------
+  // 之前「精听」和「精读」几乎没区别，只是提示条文案不同。现在精听=盲听模式：
+  // 未揭示的句子只留原文，假名/罗马字/谐音/翻译/讲解全部藏起来，靠耳朵先猜再对答案。
+  // 模式与两个开关按歌曲记住；逐句揭示进度只在这次打开内累计，重开重新盲听。
+  const LYRICS_MODE_KEY = 'lyrics-modes';
+  const LYRICS_LISTEN_KEY = 'lyrics-listen-prefs';
+  let lyricsModes = {};
+  let lyricsListenPrefs = {};
+
+  function loadLyricsModes() {
+    try {
+      const raw = localStorage.getItem(LYRICS_MODE_KEY);
+      const d = raw ? JSON.parse(raw) : null;
+      lyricsModes = (d && typeof d === 'object') ? d : {};
+    } catch (e) { lyricsModes = {}; }
+    try {
+      const raw = localStorage.getItem(LYRICS_LISTEN_KEY);
+      const d = raw ? JSON.parse(raw) : null;
+      lyricsListenPrefs = (d && typeof d === 'object') ? d : {};
+    } catch (e) { lyricsListenPrefs = {}; }
+  }
+  function saveLyricsModes() {
+    try { localStorage.setItem(LYRICS_MODE_KEY, JSON.stringify(lyricsModes)); } catch (e) {}
+  }
+  function saveLyricsListenPrefs() {
+    try { localStorage.setItem(LYRICS_LISTEN_KEY, JSON.stringify(lyricsListenPrefs)); } catch (e) {}
+  }
+  function currentListenPrefs() {
+    const k = lyricsState.currentKey;
+    if (!k) return null;
+    if (!lyricsListenPrefs[k] || typeof lyricsListenPrefs[k] !== 'object') lyricsListenPrefs[k] = {};
+    return lyricsListenPrefs[k];
+  }
+
+  function isListenBlind() {
+    return lyricsState.mode === 'listen' && !lyricsState.revealAll;
+  }
+  function isLineRevealed(L) {
+    if (!isListenBlind()) return true;
+    return lyricsState.revealed.has(L.n);
+  }
+  // 把盲听状态刷到 DOM：整块加 blind，逐行加/去 revealed
+  function applyListenBlind() {
+    const box = $('lyrics-lines');
+    if (!box) return;
+    box.classList.toggle('blind', lyricsState.mode === 'listen');
+    const lines = (lyricsState.current && lyricsState.current.lines) || [];
+    lines.forEach(L => {
+      const el = box.querySelector('.lyric-line[data-n="' + L.n + '"]');
+      if (el) el.classList.toggle('revealed', isLineRevealed(L));
+    });
+  }
+  function syncListenBar() {
+    const bar = $('lyrics-listen-bar');
+    if (bar) bar.style.display = lyricsState.mode === 'listen' ? '' : 'none';
+    if (lyricsState.mode !== 'listen') return;
+    const lines = (lyricsState.current && lyricsState.current.lines) || [];
+    const shown = lyricsState.revealAll ? lines.length : lyricsState.revealed.size;
+    const badge = $('llb-state');
+    if (badge) {
+      badge.textContent = lyricsState.revealAll ? '已全曲揭示' : '盲听中';
+      badge.classList.toggle('open', !!lyricsState.revealAll);
+    }
+    const count = $('llb-count');
+    if (count) count.textContent = '已揭示 ' + shown + ' / ' + lines.length + ' 句';
+    const all = $('lyrics-reveal-all');
+    if (all) {
+      all.textContent = lyricsState.revealAll ? '收回全部' : '全曲揭示';
+      all.classList.toggle('on', !!lyricsState.revealAll);
+    }
+    const loop = $('lyrics-loop-line');
+    if (loop) loop.classList.toggle('on', !!lyricsState.loopLine);
+  }
+
+  // 本句循环用：找到下一句（偏移后）的开始时间
+  function nextLineStart(curStart) {
+    const lines = (lyricsState.current && lyricsState.current.lines) || [];
+    for (const L of lines) { if (songTime(L) > curStart + 0.05) return songTime(L); }
+    return null;
+  }
+  // 循环回跳本身会触发一次 applyTime，加锁避免递归
+  let listenLoopBusy = false;
+  function listenLoopCheck(t) {
+    if (listenLoopBusy) return;
+    if (!lyricsState.loopLine || lyricsState.mode !== 'listen') return;
+    const L = activeLineAt(t);
+    if (!L) return;
+    const st0 = songTime(L);
+    const ns = nextLineStart(st0);
+    if (ns == null || t < ns - 0.12) return;
+    const audio = $('lyrics-audio-el');
+    if (!audio) return;
+    listenLoopBusy = true;
+    try {
+      audio.currentTime = st0 + 0.02;
+      applyTime(st0 + 0.02);
+    } catch (e) { /* seek 失败就放过这一句，下次 timeupdate 再试 */ }
+    listenLoopBusy = false;
+  }
+  // 当前句（没定位到就用正在高亮的那句），拿不到返回 null
+  function listenTargetLine() {
+    const n = lyricsState.currentLineN;
+    if (n == null) return null;
+    const lines = (lyricsState.current && lyricsState.current.lines) || [];
+    return lines.find(L => L.n === n) || null;
+  }
+
+  function revealCurrentLyricsLine() {
+    if (lyricsState.mode !== 'listen') setLyricsMode('listen');
+    if (lyricsState.revealAll) { showToast('已经全曲揭示了'); return; }
+    const L = listenTargetLine();
+    if (!L) { showToast('先播放或点一句歌词，再揭示本句'); return; }
+    if (lyricsState.revealed.has(L.n)) { showToast('这句已经揭示了'); return; }
+    lyricsState.revealed.add(L.n);
+    applyListenBlind();
+    syncListenBar();
+  }
+  function toggleRevealAllLines() {
+    lyricsState.revealAll = !lyricsState.revealAll;
+    const p = currentListenPrefs();
+    if (p) { p.revealAll = lyricsState.revealAll; saveLyricsListenPrefs(); }
+    applyListenBlind();
+    syncListenBar();
+    if (lyricsState.revealAll) showToast('全曲已揭示，随时可切回盲听');
+  }
+  function replayCurrentLyricsLine() {
+    const L = listenTargetLine();
+    if (!L) { showToast('先播放或点一句歌词'); return; }
+    if (!lyricsState.audioLoaded) { showToast('还没有音频，点右上角 🎧 选择'); return; }
+    const audio = $('lyrics-audio-el');
+    const t = songTime(L) + 0.02;
+    try { audio.currentTime = t; } catch (e) {}
+    applyTime(t);
+    if (audio.paused) audio.play().catch(() => {});
+  }
+  function toggleLoopLyricsLine() {
+    lyricsState.loopLine = !lyricsState.loopLine;
+    const p = currentListenPrefs();
+    if (p) { p.loop = lyricsState.loopLine; saveLyricsListenPrefs(); }
+    syncListenBar();
+    showToast(lyricsState.loopLine ? '本句循环已开，到下一句前会倒回来' : '本句循环已关');
+  }
+  function resetListenState() {
+    lyricsState.revealed = new Set();
+    lyricsState.revealAll = false;
+    lyricsState.loopLine = false;
   }
 
   // ---------- 存储 ----------
@@ -4864,6 +5016,8 @@
     delete lyricsState.lib[key];
     deleteLyricsAudioBlob(key);
     if (lyricsOffsets[key]) { delete lyricsOffsets[key]; saveLyricsOffsets(); }
+    if (lyricsModes[key]) { delete lyricsModes[key]; saveLyricsModes(); }
+    if (lyricsListenPrefs[key]) { delete lyricsListenPrefs[key]; saveLyricsListenPrefs(); }
     saveLyricsLib();
     renderLyricsList();
     showToast('已删除');
@@ -4875,6 +5029,7 @@
     const doc = key && lyricsState.lib[key];
     if (!doc) return;
     resetLyricsAudio();
+    resetListenState();
     lyricsState.current = doc;
     lyricsState.currentKey = key;
     lyricsState.view = 'reader';
@@ -4901,7 +5056,11 @@
     $('lyrics-library').style.display = 'none';
     $('lyrics-reader').style.display = 'flex';
     showPage('lyrics');
-    setLyricsMode('read');
+    // 恢复这首歌上次的模式与精听偏好（没记过就回精读）；逐句揭示每次重开都归零
+    const prefs = lyricsListenPrefs[key] || {};
+    lyricsState.revealAll = !!prefs.revealAll;
+    lyricsState.loopLine = !!prefs.loop;
+    setLyricsMode(lyricsModes[key] || 'read');
 
     // 若这首歌持久化过音频（来自 zip 歌曲包或上次手动选择），自动载入，重启后无需重选
     loadLyricsAudioBlob(key).then(rec => {
@@ -4922,10 +5081,13 @@
 
   function closeLyricsReader() {
     resetLyricsAudio();
+    resetListenState();
     lyricsState.view = 'library';
     lyricsState.current = null;
     lyricsState.currentKey = null;
     lyricsState.offset = 0;
+    const bar = $('lyrics-listen-bar');
+    if (bar) bar.style.display = 'none';
     $('lyrics-reader').style.display = 'none';
     $('lyrics-library').style.display = '';
     renderLyricsList();
@@ -5147,6 +5309,7 @@
       return h;
     }).join('');
     applyLyricsDisplay();
+    applyListenBlind();
   }
 
   // ---------- 时间轴 / 当前句高亮 ----------
@@ -5174,6 +5337,8 @@
       lyricsState.currentLineN = n;
       highlightLine(n);
     }
+    // 精听「本句循环」：走到下一句前倒回本句开头
+    listenLoopCheck(t);
   }
 
   function highlightLine(n) {
@@ -5191,10 +5356,13 @@
     }
   }
 
+  // 用 rect 差值算，不依赖 offsetParent（歌词区是嵌套布局，offsetTop 会算偏）
   function scrollLineToCenter(el) {
     const scroller = $('lyrics-scroll');
-    if (!scroller) return;
-    const top = el.offsetTop - scroller.clientHeight / 2 + el.clientHeight / 2;
+    if (!scroller || !el) return;
+    const er = el.getBoundingClientRect();
+    const sr = scroller.getBoundingClientRect();
+    const top = scroller.scrollTop + (er.top - sr.top) - (sr.height / 2 - er.height / 2);
     scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
   }
 
@@ -5301,6 +5469,14 @@
     const hint = $('lyrics-audio-hint');
     if (hint) hint.style.display = (mode === 'listen' && !lyricsState.audioLoaded) ? '' : 'none';
     if (isGrammar) renderGrammarCard();
+    // 模式按歌曲记住：下次打开直接回到精听 / 精读
+    if (lyricsState.currentKey) {
+      if (mode === 'read') delete lyricsModes[lyricsState.currentKey];
+      else lyricsModes[lyricsState.currentKey] = mode;
+      saveLyricsModes();
+    }
+    syncListenBar();
+    applyListenBlind();
   }
 
   // ---------- 点词弹窗 ----------
@@ -5396,6 +5572,12 @@
       btn.addEventListener('click', () => setLyricsMode(btn.dataset.lyricsMode));
     });
 
+    // 精听：盲听工具条
+    $('lyrics-reveal-line').addEventListener('click', revealCurrentLyricsLine);
+    $('lyrics-reveal-all').addEventListener('click', toggleRevealAllLines);
+    $('lyrics-replay-line').addEventListener('click', replayCurrentLyricsLine);
+    $('lyrics-loop-line').addEventListener('click', toggleLoopLyricsLine);
+
     // 歌词区：点词查解析；点句子空白处定位到该句
     $('lyrics-lines').addEventListener('click', e => {
       const w = e.target.closest('.lyric-word');
@@ -5422,6 +5604,7 @@
 
     // 歌词整体偏移：提前 / 延后 / 重置（按歌曲记住）
     loadLyricsOffsets();
+    loadLyricsModes();
     $('lyrics-offset-minus').addEventListener('click', () => setLyricsOffset((lyricsState.offset || 0) - LYRICS_OFFSET_STEP));
     $('lyrics-offset-plus').addEventListener('click', () => setLyricsOffset((lyricsState.offset || 0) + LYRICS_OFFSET_STEP));
     $('lyrics-offset-reset').addEventListener('click', () => {

@@ -413,7 +413,22 @@
 
         <!-- 精听模式：音频未选时的提示条 -->
         <div id="lyrics-audio-hint" class="lyrics-audio-hint" style="display:none;">
-          精听需要本地音频文件。点右上角 🎧 选择这首歌的音频（仅本机播放，不上传、不保存）。
+          精听需要本地音频文件。点右上角 🎧 选择这首歌的音频（只存在本机，不联网分发）。
+        </div>
+
+        <!-- 精听 = 盲听工具条：先听再看，逐句揭示 -->
+        <div id="lyrics-listen-bar" class="lyrics-listen-bar" style="display:none;">
+          <div class="llb-tip">先听，猜这句到底是什么。想好了再「揭示本句」。</div>
+          <div class="llb-status">
+            <span class="llb-badge" id="llb-state">盲听中</span>
+            <span id="llb-count">已揭示 0 / 0 句</span>
+          </div>
+          <div class="llb-row">
+            <button class="llb-btn" id="lyrics-reveal-line">揭示本句</button>
+            <button class="llb-btn" id="lyrics-reveal-all">全曲揭示</button>
+            <button class="llb-btn" id="lyrics-replay-line">重听本句</button>
+            <button class="llb-btn" id="lyrics-loop-line">本句循环</button>
+          </div>
         </div>
 
         <!-- 歌词滚动区（精读/精听） -->
@@ -512,7 +527,7 @@
         <p><b>三种模式</b>：</p>
         <ul>
           <li><b>精读</b>：对唱气泡逐句展示，点词查解析，拖时间轴定位。</li>
-          <li><b>精听</b>：点右上角 🎧 选这首歌的本地音频，播放时按时间戳自动高亮当前句。</li>
+          <li><b>精听</b>：盲听模式。未揭示的句子只留原文，假名 / 罗马字 / 谐音 / 翻译都藏起来，先靠耳朵猜，再「揭示本句」对答案；可「重听本句」「本句循环」，也可「全曲揭示」回到完整显示。点右上角 🎧 选这首歌的本地音频。</li>
           <li><b>语法卡片</b>：左右翻卡，过一遍全曲语法点（含 JLPT 等级与例句行号）。</li>
         </ul>
         <p><b>排版</b>：右上角 <b>Aa</b> 可切换注音方式（仅汉字 ruby / 整句读音 / 关闭）、词间空格（单词 / 文节）和助词变浅，设置会记住。</p>
