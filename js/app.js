@@ -4624,6 +4624,7 @@
     grammarIdx: 0,
     currentLineN: null, // 当前高亮行号
     lastScrollN: null,  // 上次自动滚动到的行，避免重复滚
+    offset: 0,          // 歌词整体时间偏移（秒），正数=延后
     audioLoaded: false,
     audioUrl: null
   };
@@ -4650,6 +4651,71 @@
     return m + ':' + String(s).padStart(2, '0');
   }
   function jlptClass(j) { return (j === '文化' || j === '—' || !j) ? 'culture' : ''; }
+
+  // ---------- 歌词时间偏移（按歌曲单独保存） ----------
+  // 有些音频和歌词时间轴略有出入：允许整首歌的歌词整体提前/延后，
+  // 不改原始歌词数据，只在播放定位时叠加 offset；设置存 localStorage。
+  const LYRICS_OFFSET_KEY = 'lyrics-offsets';
+  const LYRICS_OFFSET_STEP = 0.5;
+  const LYRICS_OFFSET_MAX = 30;
+  let lyricsOffsets = {};
+
+  function loadLyricsOffsets() {
+    try {
+      const raw = localStorage.getItem(LYRICS_OFFSET_KEY);
+      const d = raw ? JSON.parse(raw) : null;
+      lyricsOffsets = (d && typeof d === 'object') ? d : {};
+    } catch (e) { lyricsOffsets = {}; }
+  }
+  function saveLyricsOffsets() {
+    try { localStorage.setItem(LYRICS_OFFSET_KEY, JSON.stringify(lyricsOffsets)); } catch (e) {}
+  }
+  function lyricsOffsetBounds() {
+    const lines = (lyricsState.current && lyricsState.current.lines) || [];
+    const first = lines[0];
+    // 不能把第一句推到 0 秒之前
+    const min = first ? -Math.max(0, first.start || 0) : 0;
+    return { min, max: LYRICS_OFFSET_MAX };
+  }
+  // 歌词句在音频里的实际定位时间
+  function songTime(L) {
+    return Math.max(0, ((L && L.start) || 0) + (lyricsState.offset || 0));
+  }
+  function fmtOffset(v) {
+    if (!v) return '0.0s';
+    return (v > 0 ? '+' : '') + v.toFixed(1) + 's';
+  }
+  function syncLyricsOffsetUI() {
+    const v = lyricsState.offset || 0;
+    const b = lyricsOffsetBounds();
+    const val = $('lyrics-offset-val');
+    if (val) val.textContent = fmtOffset(v);
+    const minus = $('lyrics-offset-minus');
+    if (minus) minus.disabled = v <= b.min + 0.0001;
+    const plus = $('lyrics-offset-plus');
+    if (plus) plus.disabled = v >= b.max - 0.0001;
+    const reset = $('lyrics-offset-reset');
+    if (reset) reset.disabled = !v;
+  }
+  function setLyricsOffset(v) {
+    if (!lyricsState.current) return;
+    const b = lyricsOffsetBounds();
+    let next = Math.round((Number(v) || 0) * 10) / 10;
+    next = Math.max(b.min, Math.min(b.max, next));
+    lyricsState.offset = next;
+    if (lyricsState.currentKey) {
+      if (next) lyricsOffsets[lyricsState.currentKey] = next;
+      else delete lyricsOffsets[lyricsState.currentKey];
+      saveLyricsOffsets();
+    }
+    syncLyricsOffsetUI();
+    // 立即按新偏移重新定位高亮，不用等 timeupdate
+    const audio = $('lyrics-audio-el');
+    const t = (lyricsState.audioLoaded && audio)
+      ? (audio.currentTime || 0)
+      : (parseFloat($('lyrics-scrubber').value) || 0);
+    applyTime(t);
+  }
 
   // ---------- 存储 ----------
   async function loadLyricsLib() {
@@ -4797,6 +4863,7 @@
     if (!window.confirm('删除歌词《' + title + '》？此操作不可恢复。')) return;
     delete lyricsState.lib[key];
     deleteLyricsAudioBlob(key);
+    if (lyricsOffsets[key]) { delete lyricsOffsets[key]; saveLyricsOffsets(); }
     saveLyricsLib();
     renderLyricsList();
     showToast('已删除');
@@ -4814,6 +4881,9 @@
     lyricsState.grammarIdx = 0;
     lyricsState.currentLineN = null;
     lyricsState.lastScrollN = null;
+    // 恢复这首歌上次保存的偏移（限制在第一句之前不可越界）
+    const bounds = lyricsOffsetBounds();
+    lyricsState.offset = Math.max(bounds.min, Math.min(bounds.max, Number(lyricsOffsets[key]) || 0));
 
     const m = doc.meta || {};
     $('lyrics-song-title').textContent = m.songTitle || key;
@@ -4826,6 +4896,8 @@
     $('lyrics-dur-time').textContent = fmtTime(dur);
 
     renderLyricsLines();
+    syncLyricsOffsetUI();
+    applyTime(0);
     $('lyrics-library').style.display = 'none';
     $('lyrics-reader').style.display = 'flex';
     showPage('lyrics');
@@ -4853,6 +4925,7 @@
     lyricsState.view = 'library';
     lyricsState.current = null;
     lyricsState.currentKey = null;
+    lyricsState.offset = 0;
     $('lyrics-reader').style.display = 'none';
     $('lyrics-library').style.display = '';
     renderLyricsList();
@@ -5077,13 +5150,14 @@
   }
 
   // ---------- 时间轴 / 当前句高亮 ----------
-  // 一句从它的 start 高亮到下一句 start 之前（落在间隙里也算上一句）。
+  // 一句从它的（偏移后的）start 高亮到下一句 start 之前（落在间隙里也算上一句）。
+  // 第一句开始唱之前不高亮任何行，避免「还没开口就显示第一句」。
   function activeLineAt(t) {
     const lines = (lyricsState.current && lyricsState.current.lines) || [];
     if (!lines.length) return null;
     let cur = null;
-    for (const L of lines) { if (L.start <= t) cur = L; else break; }
-    return cur || lines[0];
+    for (const L of lines) { if (songTime(L) <= t) cur = L; else break; }
+    return cur;
   }
 
   function applyTime(t) {
@@ -5213,7 +5287,7 @@
     highlightLine(n);
     scrollLineToCenter(el);
     const L = (lyricsState.current.lines || []).find(x => x.n === n);
-    if (L) { const scrub = $('lyrics-scrubber'); scrub.value = String(L.start); $('lyrics-cur-time').textContent = fmtTime(L.start); }
+    if (L) { const t = songTime(L); const scrub = $('lyrics-scrubber'); scrub.value = String(t); $('lyrics-cur-time').textContent = fmtTime(t); }
   }
 
   // ---------- 模式切换 ----------
@@ -5330,7 +5404,7 @@
       if (line && lyricsState.current) {
         const n = +line.dataset.n;
         const L = (lyricsState.current.lines || []).find(x => x.n === n);
-        if (L) seekTo(L.start);
+        if (L) seekTo(songTime(L));
       }
     });
 
@@ -5345,6 +5419,16 @@
     // 时间轴拖动
     const scrub = $('lyrics-scrubber');
     scrub.addEventListener('input', () => seekTo(parseFloat(scrub.value) || 0));
+
+    // 歌词整体偏移：提前 / 延后 / 重置（按歌曲记住）
+    loadLyricsOffsets();
+    $('lyrics-offset-minus').addEventListener('click', () => setLyricsOffset((lyricsState.offset || 0) - LYRICS_OFFSET_STEP));
+    $('lyrics-offset-plus').addEventListener('click', () => setLyricsOffset((lyricsState.offset || 0) + LYRICS_OFFSET_STEP));
+    $('lyrics-offset-reset').addEventListener('click', () => {
+      if (!lyricsState.offset) return;
+      setLyricsOffset(0);
+      showToast('已重置歌词偏移');
+    });
 
     // 音频：🎧 选文件 / 播放暂停
     $('lyrics-audio-btn').addEventListener('click', toggleLyricsAudio);
