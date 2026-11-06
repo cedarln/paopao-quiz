@@ -104,6 +104,11 @@
               <span class="import-icon">📥</span>
               <span>导入本地题库</span>
             </button>
+            <button id="lyrics-btn" class="import-btn lyrics-entry-btn">
+              <span class="import-icon">🎵</span>
+              <span>歌词精读</span>
+              <span id="lyrics-badge" class="recycle-badge" style="display:none;">0</span>
+            </button>
             <button id="wrongbook-btn" class="import-btn wrongbook-btn">
               <span class="import-icon">❌</span>
               <span>错题本</span>
@@ -337,6 +342,90 @@
         </div>
       </div>
     </section>
+
+    <!-- 歌词精读：独立页面，数据走本地导入，不进题库体系 -->
+    <section id="page-lyrics" class="page">
+      <!-- 子视图 A：歌词库（已导入歌曲列表） -->
+      <div id="lyrics-library" class="lyrics-library">
+        <header class="app-header lyrics-lib-header">
+          <div class="header-content">
+            <h1 class="app-title">🎵 歌词精读</h1>
+            <p class="app-subtitle">导入标注歌词 · 逐句学日语</p>
+          </div>
+          <div class="header-actions">
+            <button id="lyrics-lib-back" class="bg-upload-btn" title="返回首页">←</button>
+          </div>
+        </header>
+        <main class="home-content">
+          <div class="section-title">
+            <span class="section-icon">📖</span>
+            <h2>我的歌词</h2>
+          </div>
+          <div id="lyrics-list" class="lyrics-list"></div>
+          <div class="import-section">
+            <div class="action-row">
+              <button id="lyrics-import-btn" class="import-btn">
+                <span class="import-icon">📥</span>
+                <span>导入歌词 JSON</span>
+              </button>
+              <button id="lyrics-help-btn" class="import-btn recycle-btn">
+                <span class="import-icon">❓</span>
+                <span>使用说明</span>
+              </button>
+            </div>
+            <p class="import-tip">歌词文件需为 lyrics-annotated/1 格式，仅保存在本机。</p>
+          </div>
+        </main>
+      </div>
+
+      <!-- 子视图 B：精读器 -->
+      <div id="lyrics-reader" class="lyrics-reader" style="display:none;">
+        <header class="lyrics-reader-header">
+          <button id="lyrics-reader-back" class="lyrics-icon-btn" title="返回歌词库">←</button>
+          <div class="lyrics-reader-title">
+            <div id="lyrics-song-title" class="lyrics-song-title">歌名</div>
+            <div id="lyrics-song-sub" class="lyrics-song-sub">作者</div>
+          </div>
+          <button id="lyrics-audio-btn" class="lyrics-icon-btn" title="选择本地音频（精听）">🎧</button>
+        </header>
+
+        <div class="lyrics-mode-tabs">
+          <button class="lyrics-mode-tab active" data-lyrics-mode="read">精读</button>
+          <button class="lyrics-mode-tab" data-lyrics-mode="listen">精听</button>
+          <button class="lyrics-mode-tab" data-lyrics-mode="grammar">语法卡片</button>
+        </div>
+
+        <!-- 时间轴（精读/精听共用） -->
+        <div id="lyrics-timeline" class="lyrics-timeline">
+          <input type="range" id="lyrics-scrubber" class="lyrics-scrubber" min="0" max="100" value="0" step="0.1">
+          <div class="lyrics-time-label">
+            <span id="lyrics-cur-time">0:00</span> / <span id="lyrics-dur-time">0:00</span>
+          </div>
+        </div>
+
+        <!-- 精听模式：音频未选时的提示条 -->
+        <div id="lyrics-audio-hint" class="lyrics-audio-hint" style="display:none;">
+          精听需要本地音频文件。点右上角 🎧 选择这首歌的音频（仅本机播放，不上传、不保存）。
+        </div>
+
+        <!-- 歌词滚动区（精读/精听） -->
+        <div id="lyrics-scroll" class="lyrics-scroll">
+          <div id="lyrics-lines" class="lyrics-lines"></div>
+        </div>
+
+        <!-- 语法卡片区 -->
+        <div id="lyrics-grammar" class="lyrics-grammar" style="display:none;">
+          <div id="lyrics-grammar-card" class="lyrics-grammar-card"></div>
+          <div class="lyrics-grammar-nav">
+            <button id="lyrics-grammar-prev" class="lyrics-icon-btn">←</button>
+            <span id="lyrics-grammar-pos" class="lyrics-grammar-pos">1 / 1</span>
+            <button id="lyrics-grammar-next" class="lyrics-icon-btn">→</button>
+          </div>
+        </div>
+
+        <audio id="lyrics-audio-el" style="display:none;"></audio>
+      </div>
+    </section>
   </div>
 
   <!-- 题目总览：按题型分组的题号盘，做套卷/考试时随时跳题 -->
@@ -360,6 +449,41 @@
 
   <!-- 导入文件选择器（隐藏） -->
   <input type="file" id="file-input" accept=".json,application/json" style="display:none;">
+
+  <!-- 歌词精读：音频文件选择器（隐藏，精听模式用，仅本机播放） -->
+  <input type="file" id="lyrics-audio-input" accept="audio/*" style="display:none;">
+
+  <!-- 歌词精读：点词解析弹窗 -->
+  <div id="lyrics-word-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content lyrics-word-modal">
+      <div id="lyrics-word-body" class="lyrics-word-body"></div>
+      <button class="modal-btn primary full-width" id="lyrics-word-close">关闭</button>
+    </div>
+  </div>
+
+  <!-- 歌词精读：使用说明弹窗 -->
+  <div id="lyrics-help-modal" class="modal-overlay" style="display:none;">
+    <div class="modal-content recycle-modal-content">
+      <div class="recycle-modal-header">
+        <h3 class="modal-title">❓ 歌词精读使用说明</h3>
+        <button class="recycle-close" id="lyrics-help-close">✕</button>
+      </div>
+      <div class="lyrics-help-text">
+        <p><b>这是什么</b>：把一首日语歌做成逐句精读材料。每句配假名读音、中文翻译，点任意词看词性/释义/语法，另有「语法卡片」汇总全曲语法点。</p>
+        <p><b>数据从哪来</b>：歌词是受版权保护的作品，不随 App 分发。你需要自己准备 <code>lyrics-annotated/1</code> 格式的 JSON 文件，点「导入歌词 JSON」加载。文件只存在本机，不上传。</p>
+        <p><b>三种模式</b>：</p>
+        <ul>
+          <li><b>精读</b>：对唱气泡逐句展示，点词查解析，拖时间轴定位。</li>
+          <li><b>精听</b>：点右上角 🎧 选这首歌的本地音频，播放时按时间戳自动高亮当前句。</li>
+          <li><b>语法卡片</b>：左右翻卡，过一遍全曲语法点（含 JLPT 等级与例句行号）。</li>
+        </ul>
+        <p><b>版权</b>：歌词版权归原作者。本功能仅供个人学习，请勿公开分发歌词文件或音频。</p>
+      </div>
+      <div class="recycle-modal-footer">
+        <button class="modal-btn full-width" id="lyrics-help-ok">知道了</button>
+      </div>
+    </div>
+  </div>
 
   <!-- 冲突处理弹窗 -->
   <div id="conflict-modal" class="modal-overlay" style="display:none;">
