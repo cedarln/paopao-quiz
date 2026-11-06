@@ -968,7 +968,8 @@
   const pages = {
     home: $('page-home'),
     quiz: $('page-quiz'),
-    result: $('page-result')
+    result: $('page-result'),
+    lyrics: $('page-lyrics')
   };
 
   // ===== 工具函数 =====
@@ -2866,6 +2867,8 @@
     reader.onload = (e) => {
       try {
         const data = JSON.parse(e.target.result);
+        // 歌词精读文件（lyrics-annotated/1）走独立通道，不进题库体系
+        if (isLyricsDoc(data)) { handleLyricsImport(data); return; }
         const validation = validateBankConfig(data);
         if (!validation.valid) {
           showResultModal(false, '配置文件校验失败：' + validation.error);
@@ -4303,6 +4306,12 @@
     cap.addListener('App', 'backButton', (data) => {
       // 1. 有弹窗（含更新/清理/成就等）或主题背景面板打开 → 先关掉
       if (closeTopOverlay()) return;
+      // 1.5 歌词精读页：精读器打开着先退回歌词库，否则回首页
+      if (currentPage === 'lyrics') {
+        if (lyricsState.view === 'reader') { closeLyricsReader(); }
+        else { showPage('home'); }
+        return;
+      }
       // 2. 答题页
       if (currentPage === 'quiz') {
         // 测评：自动缓存进度回首页（可「继续测试」恢复），无需确认
@@ -4584,6 +4593,499 @@
   }
 
   // ===== 初始化 =====
+  // ============================================================
+  // 歌词精读（schema: lyrics-annotated/1）
+  // 数据本地导入 + IndexedDB 存储，与题库体系完全解耦：
+  // 不复用 validateBankConfig / QUIZ_DATA / processImport。
+  // 界面代码可公开，但歌词文本本身不进公开仓、不打进公开 APK。
+  // ============================================================
+  const IDB_LYRICS_KEY = 'lyrics-banks';
+  const LYRICS_SCHEMA = 'lyrics-annotated/1';
+
+  const lyricsState = {
+    lib: {},            // key -> lyricsDoc
+    order: [],          // 列表顺序（renderLyricsList 刷新，供 index 定位，避免在属性里塞原始 key）
+    current: null,      // 当前打开的 doc
+    currentKey: null,
+    view: 'library',    // library | reader
+    mode: 'read',       // read | listen | grammar
+    grammarIdx: 0,
+    currentLineN: null, // 当前高亮行号
+    lastScrollN: null,  // 上次自动滚动到的行，避免重复滚
+    audioLoaded: false,
+    audioUrl: null
+  };
+
+  // ---------- 工具 ----------
+  function isLyricsDoc(data) {
+    return !!data && data.schema === LYRICS_SCHEMA && Array.isArray(data.lines) && !!data.meta;
+  }
+  function lyricsKeyOf(doc) {
+    const m = (doc && doc.meta) || {};
+    return String(m.videoId || m.songTitle || ('lyrics-' + Date.now()));
+  }
+  function lyricsDuration(doc) {
+    const m = (doc && doc.meta) || {};
+    if (typeof m.durationSeconds === 'number' && m.durationSeconds > 0) return m.durationSeconds;
+    const ls = (doc && doc.lines) || [];
+    if (!ls.length) return 0;
+    const last = ls[ls.length - 1];
+    return last.end || last.start || 0;
+  }
+  function fmtTime(sec) {
+    if (!isFinite(sec) || sec < 0) sec = 0;
+    const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+    return m + ':' + String(s).padStart(2, '0');
+  }
+  function jlptClass(j) { return (j === '文化' || j === '—' || !j) ? 'culture' : ''; }
+
+  // ---------- 存储 ----------
+  async function loadLyricsLib() {
+    try {
+      const lib = await idbGet(IDB_LYRICS_KEY);
+      lyricsState.lib = (lib && typeof lib === 'object') ? lib : {};
+    } catch (e) { lyricsState.lib = {}; }
+    renderLyricsList();
+    updateLyricsBadge();
+  }
+  function saveLyricsLib() {
+    idbSet(IDB_LYRICS_KEY, lyricsState.lib).catch(e => console.error('歌词库保存失败', e));
+    updateLyricsBadge();
+  }
+  function updateLyricsBadge() {
+    const n = Object.keys(lyricsState.lib).length;
+    const badge = $('lyrics-badge');
+    if (badge) { badge.textContent = String(n); badge.style.display = n ? '' : 'none'; }
+  }
+
+  // ---------- 导入 ----------
+  function handleLyricsImport(doc) {
+    if (!Array.isArray(doc.lines) || !doc.lines.length) {
+      showResultModal(false, '歌词文件没有 lines 数据，无法导入');
+      return;
+    }
+    const key = lyricsKeyOf(doc);
+    const isNew = !lyricsState.lib[key];
+    lyricsState.lib[key] = doc;
+    saveLyricsLib();
+    renderLyricsList();
+    const m = doc.meta || {};
+    const title = m.songTitle || m.songTitleZh || key;
+    showResultModal(true, `${isNew ? '成功导入' : '已更新'}歌词《${title}》，共 ${doc.lines.length} 句`);
+  }
+
+  // ---------- 歌词库列表 ----------
+  function renderLyricsList() {
+    const box = $('lyrics-list');
+    if (!box) return;
+    lyricsState.order = Object.keys(lyricsState.lib);
+    if (!lyricsState.order.length) {
+      box.innerHTML = '<div class="lyrics-empty"><span class="lyrics-empty-icon">🎵</span>'
+        + '还没有导入歌词。<br>点下方「导入歌词 JSON」加载一首标注歌词开始精读。</div>';
+      return;
+    }
+    box.innerHTML = lyricsState.order.map((k, i) => {
+      const d = lyricsState.lib[k] || {};
+      const m = d.meta || {};
+      const proofread = !!(m.annotation && m.annotation.proofread);
+      const sub = [m.channel, m.songTitleZh].filter(Boolean).join(' · ');
+      return ''
+        + '<div class="lyrics-card" data-idx="' + i + '">'
+        +   '<div class="lyrics-card-art">🎵</div>'
+        +   '<div class="lyrics-card-info">'
+        +     '<div class="lyrics-card-title">' + escapeHtml(m.songTitle || k) + '</div>'
+        +     (sub ? '<div class="lyrics-card-sub">' + escapeHtml(sub) + '</div>' : '')
+        +     '<div class="lyrics-card-meta">'
+        +       '<span>📝 ' + ((d.lines || []).length) + ' 句</span>'
+        +       '<span>🧩 ' + ((d.grammarIndex || []).length) + ' 语法</span>'
+        +       (proofread ? '' : '<span class="lyrics-card-proof">未校对</span>')
+        +     '</div>'
+        +   '</div>'
+        +   '<button class="lyrics-card-del" data-del="' + i + '" title="删除">✕</button>'
+        + '</div>';
+    }).join('');
+  }
+
+  function deleteLyrics(idx) {
+    const key = lyricsState.order[idx];
+    if (!key) return;
+    const d = lyricsState.lib[key] || {};
+    const title = (d.meta && (d.meta.songTitle || d.meta.songTitleZh)) || key;
+    if (!window.confirm('删除歌词《' + title + '》？此操作不可恢复。')) return;
+    delete lyricsState.lib[key];
+    saveLyricsLib();
+    renderLyricsList();
+    showToast('已删除');
+  }
+
+  // ---------- 打开 / 关闭精读器 ----------
+  function openLyricsReader(idx) {
+    const key = lyricsState.order[idx];
+    const doc = key && lyricsState.lib[key];
+    if (!doc) return;
+    resetLyricsAudio();
+    lyricsState.current = doc;
+    lyricsState.currentKey = key;
+    lyricsState.view = 'reader';
+    lyricsState.grammarIdx = 0;
+    lyricsState.currentLineN = null;
+    lyricsState.lastScrollN = null;
+
+    const m = doc.meta || {};
+    $('lyrics-song-title').textContent = m.songTitle || key;
+    $('lyrics-song-sub').textContent = [m.channel, m.songTitleZh].filter(Boolean).join(' · ') || '';
+    const dur = lyricsDuration(doc);
+    const scrub = $('lyrics-scrubber');
+    scrub.max = String(dur || 0);
+    scrub.value = '0';
+    $('lyrics-cur-time').textContent = '0:00';
+    $('lyrics-dur-time').textContent = fmtTime(dur);
+
+    renderLyricsLines();
+    $('lyrics-library').style.display = 'none';
+    $('lyrics-reader').style.display = 'flex';
+    showPage('lyrics');
+    setLyricsMode('read');
+  }
+
+  function closeLyricsReader() {
+    resetLyricsAudio();
+    lyricsState.view = 'library';
+    lyricsState.current = null;
+    lyricsState.currentKey = null;
+    $('lyrics-reader').style.display = 'none';
+    $('lyrics-library').style.display = '';
+    renderLyricsList();
+  }
+
+  // ---------- 渲染歌词行 ----------
+  function wordSpan(t, ti, L) {
+    const hg = (t.grammar && t.grammar.length) ? ' has-grammar' : '';
+    // rtl 既可能标在 token 上，也可能只标在整句上（如阿拉伯语名字句），两者都要生效
+    const rtl = (t.rtl || L.rtl) ? ' rtl' : '';
+    return '<span class="lyric-word' + hg + rtl + '" data-line="' + L.n + '" data-ti="' + ti + '">'
+      + escapeHtml(t.surface) + '</span>';
+  }
+  // 按 token 顺序平铺原句 text，保留 token 之间的原始字符（如名字串烧里的空格），
+  // 每个 token 渲染成可点 span。若 token 无法按序匹配 text，整句降级为不可点纯文本。
+  function buildWordsHtml(L) {
+    const tokens = L.tokens || [];
+    const text = L.text || '';
+    if (!tokens.length) return '<span class="lyric-plain">' + escapeHtml(text) + '</span>';
+    let pos = 0, ok = true;
+    for (const t of tokens) {
+      const idx = text.indexOf(t.surface, pos);
+      if (idx === -1) { ok = false; break; }
+      pos = idx + t.surface.length;
+    }
+    if (!ok) return '<span class="lyric-plain">' + escapeHtml(text) + '</span>';
+    pos = 0;
+    let out = '';
+    tokens.forEach((t, ti) => {
+      const idx = text.indexOf(t.surface, pos);
+      if (idx > pos) out += escapeHtml(text.slice(pos, idx));
+      out += wordSpan(t, ti, L);
+      pos = idx + t.surface.length;
+    });
+    if (pos < text.length) out += escapeHtml(text.slice(pos));
+    return out;
+  }
+
+  function renderLyricsLines() {
+    const doc = lyricsState.current;
+    const box = $('lyrics-lines');
+    if (!doc || !box) return;
+    box.innerHTML = (doc.lines || []).map(L => {
+      const gender = L.speaker === '男' ? 'male' : 'female';
+      const barrage = L.nameBarrage ? ' barrage' : '';
+      const rtlLine = L.rtl ? ' rtl' : '';
+      const spk = L.speaker === '男' ? '♂ 男' : '♀ 女';
+      const inferred = L.speakerInferred ? '<span style="opacity:.55;font-weight:400">（推测）</span>' : '';
+      let h = '<div class="lyric-line ' + gender + barrage + '" data-n="' + L.n + '">';
+      h += '<div class="lyric-bubble">';
+      h += '<div class="lyric-speaker">' + spk + ' ' + inferred + '</div>';
+      if (L.reading) h += '<div class="lyric-reading">' + escapeHtml(L.reading) + '</div>';
+      h += '<div class="lyric-text' + rtlLine + '">' + buildWordsHtml(L) + '</div>';
+      if (L.zh) h += '<div class="lyric-zh">' + escapeHtml(L.zh) + '</div>';
+      if (L.note) h += '<div class="lyric-note">💡 ' + escapeHtml(L.note) + '</div>';
+      h += '</div></div>';
+      return h;
+    }).join('');
+  }
+
+  // ---------- 时间轴 / 当前句高亮 ----------
+  // 一句从它的 start 高亮到下一句 start 之前（落在间隙里也算上一句）。
+  function activeLineAt(t) {
+    const lines = (lyricsState.current && lyricsState.current.lines) || [];
+    if (!lines.length) return null;
+    let cur = null;
+    for (const L of lines) { if (L.start <= t) cur = L; else break; }
+    return cur || lines[0];
+  }
+
+  function applyTime(t) {
+    const doc = lyricsState.current;
+    if (!doc) return;
+    const dur = lyricsDuration(doc) || 1;
+    t = Math.max(0, Math.min(t, dur));
+    const scrub = $('lyrics-scrubber');
+    if (document.activeElement !== scrub) scrub.value = String(t);
+    $('lyrics-cur-time').textContent = fmtTime(t);
+    const L = activeLineAt(t);
+    const n = L ? L.n : null;
+    if (n !== lyricsState.currentLineN) {
+      lyricsState.currentLineN = n;
+      highlightLine(n);
+    }
+  }
+
+  function highlightLine(n) {
+    const box = $('lyrics-lines');
+    if (!box) return;
+    box.querySelectorAll('.lyric-line.current').forEach(el => el.classList.remove('current'));
+    if (n == null) return;
+    const el = box.querySelector('.lyric-line[data-n="' + n + '"]');
+    if (!el) return;
+    el.classList.add('current');
+    // 精听播放时自动把当前句滚到视口中央
+    if (lyricsState.mode === 'listen' && lyricsState.audioLoaded && n !== lyricsState.lastScrollN) {
+      lyricsState.lastScrollN = n;
+      scrollLineToCenter(el);
+    }
+  }
+
+  function scrollLineToCenter(el) {
+    const scroller = $('lyrics-scroll');
+    if (!scroller) return;
+    const top = el.offsetTop - scroller.clientHeight / 2 + el.clientHeight / 2;
+    scroller.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+  }
+
+  function seekTo(t) {
+    const audio = $('lyrics-audio-el');
+    if (lyricsState.audioLoaded && audio) {
+      try { audio.currentTime = t; } catch (e) { /* seek 失败忽略 */ }
+      applyTime(t); // 立即反馈，不等 timeupdate
+    } else {
+      applyTime(t);
+    }
+  }
+
+  // ---------- 精听：本地音频 ----------
+  function resetLyricsAudio() {
+    const audio = $('lyrics-audio-el');
+    if (audio) { audio.pause(); audio.removeAttribute('src'); try { audio.load(); } catch (e) {} }
+    if (lyricsState.audioUrl) { URL.revokeObjectURL(lyricsState.audioUrl); }
+    lyricsState.audioUrl = null;
+    lyricsState.audioLoaded = false;
+    const btn = $('lyrics-audio-btn');
+    if (btn) btn.textContent = '🎧';
+    const scroller = $('lyrics-scroll');
+    if (scroller) scroller.classList.remove('focus-mode');
+  }
+
+  function onLyricsAudioFile(file) {
+    if (!file) return;
+    resetLyricsAudio();
+    const url = URL.createObjectURL(file);
+    const audio = $('lyrics-audio-el');
+    audio.src = url;
+    lyricsState.audioUrl = url;
+    lyricsState.audioLoaded = true;
+    const btn = $('lyrics-audio-btn');
+    if (btn) btn.textContent = '▶';
+    if (lyricsState.mode === 'listen') {
+      const hint = $('lyrics-audio-hint');
+      if (hint) hint.style.display = 'none';
+    }
+    audio.play().catch(() => showToast('音频已载入，点 ▶ 播放'));
+  }
+
+  function toggleLyricsAudio() {
+    if (!lyricsState.audioLoaded) { $('lyrics-audio-input').click(); return; }
+    const audio = $('lyrics-audio-el');
+    if (audio.paused) audio.play(); else audio.pause();
+  }
+
+  // ---------- 语法卡片 ----------
+  function renderGrammarCard() {
+    const doc = lyricsState.current;
+    const gi = (doc && doc.grammarIndex) || [];
+    const card = $('lyrics-grammar-card');
+    const pos = $('lyrics-grammar-pos');
+    if (!card) return;
+    if (!gi.length) {
+      card.innerHTML = '<div class="lyrics-empty">这首歌没有语法卡片数据。</div>';
+      if (pos) pos.textContent = '0 / 0';
+      return;
+    }
+    lyricsState.grammarIdx = Math.max(0, Math.min(lyricsState.grammarIdx, gi.length - 1));
+    const g = gi[lyricsState.grammarIdx];
+    if (pos) pos.textContent = (lyricsState.grammarIdx + 1) + ' / ' + gi.length;
+    const examples = (g.examples || []).map(n => {
+      const L = (doc.lines || []).find(x => x.n === n);
+      return '<div class="lg-example" data-goto="' + n + '"><span class="lg-ex-n">' + n + '</span>'
+        + escapeHtml(L ? L.text : '') + '</div>';
+    }).join('');
+    card.innerHTML = ''
+      + '<div class="lg-head"><span class="lg-jlpt ' + jlptClass(g.jlpt) + '">' + escapeHtml(g.jlpt || '—') + '</span>'
+      +   '<span class="lg-title">' + escapeHtml(g.title || '') + '</span></div>'
+      + (g.pattern ? '<div class="lg-pattern">' + escapeHtml(g.pattern) + '</div>' : '')
+      + (g.zhPattern ? '<div class="lg-zhpattern">' + escapeHtml(g.zhPattern) + '</div>' : '')
+      + (g.explanation ? '<div class="lg-explain">' + escapeHtml(g.explanation) + '</div>' : '')
+      + (g.note ? '<div class="lg-note">💡 ' + escapeHtml(g.note) + '</div>' : '')
+      + (examples ? '<div class="lg-examples-title">本曲例句（点击跳到精读）</div>' + examples : '');
+  }
+
+  function gotoLineFromGrammar(n) {
+    setLyricsMode('read');
+    const box = $('lyrics-lines');
+    const el = box && box.querySelector('.lyric-line[data-n="' + n + '"]');
+    if (!el) return;
+    lyricsState.currentLineN = n;
+    highlightLine(n);
+    scrollLineToCenter(el);
+    const L = (lyricsState.current.lines || []).find(x => x.n === n);
+    if (L) { const scrub = $('lyrics-scrubber'); scrub.value = String(L.start); $('lyrics-cur-time').textContent = fmtTime(L.start); }
+  }
+
+  // ---------- 模式切换 ----------
+  function setLyricsMode(mode) {
+    lyricsState.mode = mode;
+    document.querySelectorAll('.lyrics-mode-tab').forEach(b => b.classList.toggle('active', b.dataset.lyricsMode === mode));
+    const isGrammar = (mode === 'grammar');
+    $('lyrics-scroll').style.display = isGrammar ? 'none' : '';
+    $('lyrics-grammar').style.display = isGrammar ? 'flex' : 'none';
+    $('lyrics-timeline').style.display = isGrammar ? 'none' : '';
+    const hint = $('lyrics-audio-hint');
+    if (hint) hint.style.display = (mode === 'listen' && !lyricsState.audioLoaded) ? '' : 'none';
+    if (isGrammar) renderGrammarCard();
+  }
+
+  // ---------- 点词弹窗 ----------
+  function showWordPopup(lineN, ti) {
+    const doc = lyricsState.current;
+    if (!doc) return;
+    const L = (doc.lines || []).find(x => x.n === lineN);
+    if (!L) return;
+    const t = (L.tokens || [])[ti];
+    if (!t) return;
+    const gi = doc.grammarIndex || [];
+    const gLinks = (t.grammar || []).map(id => {
+      const g = gi.find(x => x.id === id);
+      return g ? '<span class="lw-tag lw-grammar-link" data-gid="' + escapeHtml(id) + '">' + escapeHtml(g.title) + '</span>' : '';
+    }).join('');
+    let h = '<div class="lw-head"><span class="lw-surface">' + escapeHtml(t.surface) + '</span>';
+    if (t.reading && t.reading !== t.surface) h += '<span class="lw-reading">' + escapeHtml(t.reading) + '</span>';
+    h += '</div>';
+    if (t.base && t.base !== t.surface) h += '<div class="lw-base">原形：' + escapeHtml(t.base) + '</div>';
+    h += '<div class="lw-row"><span class="lw-label">词性</span><span class="lw-val">' + escapeHtml(t.pos || '—') + '</span></div>';
+    h += '<div class="lw-row"><span class="lw-label">释义</span><span class="lw-val">' + escapeHtml(t.meaning || '—') + '</span></div>';
+    h += '<div class="lw-row"><span class="lw-label">等级</span><span class="lw-val"><span class="lw-tags">'
+      + (t.jlpt ? '<span class="lw-tag jlpt">' + escapeHtml(t.jlpt) + '</span>' : '<span class="lw-tag">—</span>')
+      + '</span></span></div>';
+    if (gLinks) h += '<div class="lw-row"><span class="lw-label">语法</span><span class="lw-val"><span class="lw-tags">' + gLinks + '</span></span></div>';
+    h += '<div class="lw-row"><span class="lw-label">原句</span><span class="lw-val">' + escapeHtml(L.text || '')
+      + (L.zh ? '<br><span style="color:var(--text-muted)">' + escapeHtml(L.zh) + '</span>' : '') + '</span></div>';
+    $('lyrics-word-body').innerHTML = h;
+    $('lyrics-word-modal').style.display = 'flex';
+  }
+
+  function showGrammarById(gid) {
+    const doc = lyricsState.current;
+    const gi = (doc && doc.grammarIndex) || [];
+    const idx = gi.findIndex(x => x.id === gid);
+    if (idx === -1) return;
+    $('lyrics-word-modal').style.display = 'none';
+    lyricsState.grammarIdx = idx;
+    setLyricsMode('grammar');
+  }
+
+  // ---------- 事件绑定 ----------
+  function bindLyricsEvents() {
+    // 首页入口 → 歌词库
+    $('lyrics-btn').addEventListener('click', () => {
+      lyricsState.view = 'library';
+      $('lyrics-reader').style.display = 'none';
+      $('lyrics-library').style.display = '';
+      renderLyricsList();
+      showPage('lyrics');
+    });
+    $('lyrics-lib-back').addEventListener('click', () => showPage('home'));
+    $('lyrics-reader-back').addEventListener('click', () => closeLyricsReader());
+
+    // 导入 / 说明（导入复用全局 file-input，由 handleImportFile 嗅探 schema 分流）
+    $('lyrics-import-btn').addEventListener('click', () => $('file-input').click());
+    $('lyrics-help-btn').addEventListener('click', () => { $('lyrics-help-modal').style.display = 'flex'; });
+    $('lyrics-help-close').addEventListener('click', () => { $('lyrics-help-modal').style.display = 'none'; });
+    $('lyrics-help-ok').addEventListener('click', () => { $('lyrics-help-modal').style.display = 'none'; });
+    $('lyrics-help-modal').addEventListener('click', e => { if (e.target.id === 'lyrics-help-modal') $('lyrics-help-modal').style.display = 'none'; });
+
+    // 列表：打开 / 删除
+    $('lyrics-list').addEventListener('click', e => {
+      const del = e.target.closest('[data-del]');
+      if (del) { e.stopPropagation(); deleteLyrics(+del.dataset.del); return; }
+      const card = e.target.closest('.lyrics-card');
+      if (card) openLyricsReader(+card.dataset.idx);
+    });
+
+    // 模式切换
+    document.querySelectorAll('.lyrics-mode-tab').forEach(btn => {
+      btn.addEventListener('click', () => setLyricsMode(btn.dataset.lyricsMode));
+    });
+
+    // 歌词区：点词查解析；点句子空白处定位到该句
+    $('lyrics-lines').addEventListener('click', e => {
+      const w = e.target.closest('.lyric-word');
+      if (w) { showWordPopup(+w.dataset.line, +w.dataset.ti); return; }
+      const line = e.target.closest('.lyric-line');
+      if (line && lyricsState.current) {
+        const n = +line.dataset.n;
+        const L = (lyricsState.current.lines || []).find(x => x.n === n);
+        if (L) seekTo(L.start);
+      }
+    });
+
+    // 点词弹窗：关闭 / 点语法标签跳卡片
+    $('lyrics-word-close').addEventListener('click', () => { $('lyrics-word-modal').style.display = 'none'; });
+    $('lyrics-word-modal').addEventListener('click', e => {
+      if (e.target.id === 'lyrics-word-modal') { $('lyrics-word-modal').style.display = 'none'; return; }
+      const g = e.target.closest('[data-gid]');
+      if (g) showGrammarById(g.dataset.gid);
+    });
+
+    // 时间轴拖动
+    const scrub = $('lyrics-scrubber');
+    scrub.addEventListener('input', () => seekTo(parseFloat(scrub.value) || 0));
+
+    // 音频：🎧 选文件 / 播放暂停
+    $('lyrics-audio-btn').addEventListener('click', toggleLyricsAudio);
+    $('lyrics-audio-input').addEventListener('change', e => {
+      const f = e.target.files[0];
+      if (f) onLyricsAudioFile(f);
+      e.target.value = '';
+    });
+    const audio = $('lyrics-audio-el');
+    audio.addEventListener('timeupdate', () => applyTime(audio.currentTime));
+    audio.addEventListener('play', () => {
+      $('lyrics-audio-btn').textContent = '⏸';
+      $('lyrics-scroll').classList.add('focus-mode');
+    });
+    audio.addEventListener('pause', () => { $('lyrics-audio-btn').textContent = '▶'; });
+    audio.addEventListener('ended', () => {
+      $('lyrics-audio-btn').textContent = '▶';
+      $('lyrics-scroll').classList.remove('focus-mode');
+    });
+
+    // 语法卡片翻页 + 例句跳转
+    $('lyrics-grammar-prev').addEventListener('click', () => { lyricsState.grammarIdx--; renderGrammarCard(); });
+    $('lyrics-grammar-next').addEventListener('click', () => { lyricsState.grammarIdx++; renderGrammarCard(); });
+    $('lyrics-grammar-card').addEventListener('click', e => {
+      const ex = e.target.closest('[data-goto]');
+      if (ex) gotoLineFromGrammar(+ex.dataset.goto);
+    });
+  }
+
   async function init() {
     loadTheme();
     loadCustomBackground();
@@ -4593,6 +5095,7 @@
     loadFavorites();
     loadStudyLog();
     await loadImportedBanks(); // 需在渲染题库列表前完成（含旧数据迁移）
+    loadLyricsLib();           // 歌词精读库（独立于题库，异步加载自渲染）
     loadRecycleBin();
     loadWrongBook();
     updateStreak();
@@ -4607,6 +5110,7 @@
     bindQuestionNav();
     bindResultEvents();
     bindImportEvents();
+    bindLyricsEvents();
     bindUxEvents();
     bindGamificationEvents();
     bindPortalAndUpdateEvents();
