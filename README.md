@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.8.4-orange)
+![Version](https://img.shields.io/badge/version-1.8.5-orange)
 
 ---
 
@@ -88,8 +88,9 @@ cd android && ./gradlew assembleRelease
 
 ## 📦 版本
 
-当前版本 **v1.8.4**，完整安装包与历史版本见 [Releases](https://github.com/cedarln/paopao-quiz/releases)。
+当前版本 **v1.8.5**，完整安装包与历史版本见 [Releases](https://github.com/cedarln/paopao-quiz/releases)。
 
+- **v1.8.5** — 精听改成盲听：先听再看，逐句揭示，可重听与本句循环
 - **v1.8.4** — 歌词时间轴可整体微调，按歌曲记住
 - **v1.8.3** — 韩语歌词支持：罗马字读音与中文谐音
 - **v1.8.2** — 歌词注音、词间空格与助词变浅
