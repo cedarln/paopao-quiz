@@ -3553,6 +3553,29 @@ body.custom-bg::before {
   font-variant-numeric: tabular-nums;
 }
 
+/* 歌词时间偏移：整首歌的歌词相对音频提前/延后，按歌曲单独记住 */
+.lyrics-offset-row {
+  display: flex; align-items: center; gap: 6px;
+  margin-top: 6px; font-size: 11px; color: var(--text-muted);
+}
+.lob-label { margin-right: 2px; }
+.lob-step {
+  padding: 3px 8px; border: 1px solid var(--border); background: var(--bg);
+  color: var(--text-secondary); border-radius: 8px; font-size: 11px;
+  cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.lob-step:active { background: var(--primary); border-color: var(--primary); color: #fff; }
+.lob-step:disabled { opacity: .35; cursor: default; }
+.lob-val {
+  min-width: 46px; text-align: center; color: var(--text-primary);
+  font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.lob-reset {
+  margin-left: auto; padding: 3px 6px; border: 0; background: none;
+  color: var(--primary); font-size: 11px; cursor: pointer;
+}
+.lob-reset:disabled { color: var(--text-muted); opacity: .45; cursor: default; }
+
 /* 精听音频提示 */
 .lyrics-audio-hint {
   margin: 8px 14px 0; padding: 10px 12px;
