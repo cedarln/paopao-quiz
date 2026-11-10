@@ -56,6 +56,7 @@
   const ACHIEVEMENTS_STORAGE = 'quiz-achievements';
   const FAVORITES_STORAGE = 'quiz-favorites';
   const STUDY_LOG_STORAGE = 'quiz-study-log';
+  const BADGE_SEEN_STORAGE = 'quiz-badge-seen';
 
   // ===== IndexedDB 题库存储 =====
   // 导入的题库（尤其是几千题的英语词库）体积可达数 MB，localStorage 配额只有约 5MB，
@@ -201,6 +202,43 @@
     const today = localDateStr(new Date());
     state.studyLog[today] = (state.studyLog[today] || 0) + 1;
     saveStudyLog();
+  }
+
+  // ===== 首页角标：已读即隐，变多再显 =====
+  // 角标只表示「有你会还没见过的新增」：点开入口时按当前数量记为已读并消失；
+  // 之后数量超过已读值才重新出现。数量变少（删题、题库已加载）不该再催用户。
+  const BADGE_MODAL = {
+    'portal-badge': 'portal-modal',
+    'wrongbook-badge': 'wrongbook-modal',
+    'favorites-badge': 'favorites-modal',
+    'achievement-badge': 'achievement-modal',
+    'recycle-badge': 'recycle-modal'
+  };
+  const badgeSeen = (function () {
+    try { return JSON.parse(localStorage.getItem(BADGE_SEEN_STORAGE)) || {}; } catch (e) { return {}; }
+  })();
+  const badgeCounts = {};
+  function saveBadgeSeen() {
+    try { localStorage.setItem(BADGE_SEEN_STORAGE, JSON.stringify(badgeSeen)); } catch (e) {}
+  }
+  function paintBadge(id, count) {
+    const badge = $(id);
+    if (!badge) return;
+    badgeCounts[id] = count;
+    // 对应弹窗正开着 = 用户已经在看，直接记为已读（传送门是异步刷新的，
+    // 只在点击那一刻记一次会漏掉随后加载出来的数量）
+    const modal = $(BADGE_MODAL[id]);
+    if (modal && modal.style.display !== 'none' && modal.style.display !== '') {
+      badgeSeen[id] = count;
+      saveBadgeSeen();
+    }
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.style.display = (count > 0 && count > (badgeSeen[id] || 0)) ? 'inline-flex' : 'none';
+  }
+  function markBadgeSeen(id) {
+    badgeSeen[id] = badgeCounts[id] || 0;
+    saveBadgeSeen();
+    paintBadge(id, badgeCounts[id] || 0);
   }
 
   // ===== 收藏夹 =====
@@ -855,25 +893,6 @@
     else playAudio(audioSrc.src, btn);
   }
 
-  // ===== 每日一言 =====
-  const DAILY_QUOTES = [
-    '今天也要元气满满地学习呀！✨',
-    '努力的人运气都不会太差 🍀',
-    '每一道题都是通往成功的台阶 🪜',
-    '坚持就是胜利，你比想象中更强 💪',
-    '学海无涯，刷题作舟 🚣',
-    '愿你合上笔盖的那一刻，有战士收刀入鞘的骄傲 ⚔️',
-    '天赋决定上限，努力决定下限 🌟',
-    '别让明天的你，讨厌今天的自己 ⏰',
-    '乾坤未定，你我皆是黑马 🐎',
-    '再坚持一下，上岸就在前方 🏊'
-  ];
-  function getDailyQuote() {
-    const today = new Date().toDateString();
-    let idx = 0;
-    for (let i = 0; i < today.length; i++) idx += today.charCodeAt(i);
-    return DAILY_QUOTES[idx % DAILY_QUOTES.length];
-  }
 
   // ===== 教资考试倒计时数据 =====
   // 来源：教育部教育考试院公告 / 行业汇总（未官方公布的日期标注「预计」）
@@ -907,8 +926,17 @@
 
     if (upcoming.length === 0) {
       container.innerHTML = '<div class="countdown-empty">暂无即将到来的考试安排</div>';
+      const sum0 = $('countdown-fold-sum');
+      if (sum0) sum0.textContent = '暂无安排';
       return;
     }
+
+    // 折叠条上的摘要：最近一场 + 剩余天数
+    const first = upcoming[0];
+    const firstDate = new Date(first.date + 'T00:00:00');
+    const firstDays = Math.ceil((firstDate - now) / 86400000);
+    const sum = $('countdown-fold-sum');
+    if (sum) sum.textContent = `${first.name.slice(-2)} 还有 ${firstDays} 天`;
 
     container.innerHTML = upcoming.map(exam => {
       const examDate = new Date(exam.date + 'T00:00:00');
@@ -949,6 +977,7 @@
       leveledUp = true;
     }
     saveXp();
+    renderHeaderMeta(); // 顶栏 chip 实时刷新 XP / 等级
     return leveledUp;
   }
 
@@ -1042,7 +1071,7 @@
       ? Math.round((state.stats.totalCorrect / state.stats.totalAnswered) * 100)
       : 0;
     $('stat-rate').textContent = rate + '%';
-    $('stat-streak').textContent = state.stats.streakDays + '天';
+    renderHeaderMeta(); // 连续打卡只在顶栏 chip 展示，统计条不再重复
   }
 
   // ===== 首页渲染 =====
@@ -1198,6 +1227,7 @@
       qtySlider.addEventListener('input', () => {
         state.qty = parseInt(qtySlider.value, 10);
         if (qtyValueEl) qtyValueEl.textContent = state.qty;
+        refreshSettingsFold();
       });
       // 初始化显示
       qtySlider.value = state.qty;
@@ -1210,6 +1240,7 @@
       document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.mode = btn.dataset.mode;
+      refreshSettingsFold();
     });
 
     $('start-btn').addEventListener('click', startQuiz);
@@ -1305,6 +1336,7 @@
         if (qty > 0) state.qty = qty;
       }
     }
+    refreshSettingsFold();
 
     $('start-btn').disabled = !has || isAss || isPaper;
     $('exam-start-btn').disabled = !has || isAss || isPaper;
@@ -3164,14 +3196,11 @@
 
   // 更新回收站入口角标
   function updateRecycleBinBadge() {
-    const badge = $('recycle-badge');
-    if (!badge) return;
-    const count = Object.keys(state.recycleBin).length;
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    paintBadge('recycle-badge', Object.keys(state.recycleBin).length);
   }
 
   function openRecycleBin() {
+    markBadgeSeen('recycle-badge');
     renderRecycleBinList();
     $('recycle-modal').style.display = 'flex';
   }
@@ -3291,14 +3320,11 @@
   }
 
   function updateWrongBookBadge() {
-    const badge = $('wrongbook-badge');
-    if (!badge) return;
-    const count = Object.keys(state.wrongBook).length;
-    badge.textContent = count;
-    badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    paintBadge('wrongbook-badge', Object.keys(state.wrongBook).length);
   }
 
   function openWrongBook() {
+    markBadgeSeen('wrongbook-badge');
     renderWrongBookList();
     $('wrongbook-modal').style.display = 'flex';
   }
@@ -3753,6 +3779,7 @@
 
   // ===== 成就弹窗 =====
   function openAchievementModal() {
+    markBadgeSeen('achievement-badge');
     const unlocked = Object.keys(state.achievements).length;
     const pct = Math.round((unlocked / ACHIEVEMENTS.length) * 100);
     $('achievement-stats').innerHTML = `已解锁 <b>${unlocked}</b> / ${ACHIEVEMENTS.length} 个成就 · 完成度 <b>${pct}%</b>
@@ -3789,23 +3816,91 @@
     $('achievement-modal').style.display = 'flex';
   }
   function updateAchievementBadge() {
-    const count = Object.keys(state.achievements).length;
-    const badge = $('achievement-badge');
-    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
-    else badge.style.display = 'none';
+    paintBadge('achievement-badge', Object.keys(state.achievements).length);
   }
 
-  // ===== 学习日历热力图 =====
-  function openHeatmapModal() {
-    const container = $('heatmap-container');
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-    const days = 365;
-    const start = new Date(today);
-    start.setDate(start.getDate() - days);
-    // 对齐到周日
-    start.setDate(start.getDate() - start.getDay());
+  // ===== 学习日历（按月） =====
+  // 一次只显示一个月：顶部保留累计统计，日历本体用左右按钮翻月。
+  // 起始月取学习日志里最早的一条记录，没有记录时不早于今年 1 月。
+  const heatmapView = { y: 0, m: 0, picked: null };
+  const WEEK_LABELS = ['日', '一', '二', '三', '四', '五', '六'];
 
+  function monthIndex(o) { return o.y * 12 + o.m; }
+  function heatmapEarliestMonth() {
+    const today = new Date();
+    const keys = Object.keys(state.studyLog).sort();
+    if (!keys.length) return { y: today.getFullYear(), m: 0 };
+    const p = keys[0].split('-');
+    return { y: parseInt(p[0], 10) || today.getFullYear(), m: (parseInt(p[1], 10) || 1) - 1 };
+  }
+  // 色阶沿用过去一年的分档：1~5 题为最浅，16 题以上最深
+  function heatLevel(count) {
+    return count > 0 ? Math.min(4, Math.ceil(count / 5)) : 0;
+  }
+  function monthStat(y, m) {
+    const days = new Date(y, m + 1, 0).getDate();
+    let total = 0, active = 0, best = 0, bestDay = 0;
+    for (let d = 1; d <= days; d++) {
+      const c = state.studyLog[localDateStr(new Date(y, m, d))] || 0;
+      total += c;
+      if (c) { active++; if (c > best) { best = c; bestDay = d; } }
+    }
+    return { days, total, active, best, bestDay };
+  }
+  function renderHeatmapDayInfo() {
+    const el = $('heatmap-day-info');
+    if (!el) return;
+    if (!heatmapView.picked) { el.textContent = '点任意一天看当天题量'; return; }
+    const c = state.studyLog[heatmapView.picked] || 0;
+    const d = new Date(heatmapView.picked + 'T00:00:00');
+    el.textContent = (d.getMonth() + 1) + '月' + d.getDate() + '日（' + WEEK_LABELS[d.getDay()] + '）：'
+      + (c ? c + ' 题' : '没刷题');
+  }
+  function renderHeatmapMonth() {
+    const grid = $('heatmap-grid');
+    if (!grid) return;
+    const y = heatmapView.y, m = heatmapView.m;
+    const st = monthStat(y, m);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayStr = localDateStr(today);
+
+    $('heatmap-month').textContent = y + '年' + (m + 1) + '月';
+    $('heatmap-month-sub').textContent = '本月 ' + st.total + ' 题 · 活跃 ' + st.active + ' 天'
+      + (st.best ? ' · 最佳 ' + st.bestDay + ' 日 ' + st.best + ' 题' : '');
+
+    let html = '';
+    for (let i = 0; i < new Date(y, m, 1).getDay(); i++) html += '<div class="heatmap-cell blank"></div>';
+    for (let d = 1; d <= st.days; d++) {
+      const date = new Date(y, m, d);
+      const dateStr = localDateStr(date);
+      const count = state.studyLog[dateStr] || 0;
+      const isFuture = date > today;
+      const cls = 'heatmap-cell lv' + heatLevel(isFuture ? 0 : count)
+        + (dateStr === todayStr ? ' today' : '')
+        + (isFuture ? ' future' : '')
+        + (heatmapView.picked === dateStr ? ' picked' : '');
+      html += `<div class="${cls}" data-date="${dateStr}" title="${dateStr}：${count} 题">`
+        + `<span class="hm-d">${d}</span>` + (count ? `<span class="hm-n">${count}</span>` : '') + '</div>';
+    }
+    grid.innerHTML = html;
+
+    const earliest = heatmapEarliestMonth();
+    $('heatmap-prev').disabled = monthIndex({ y, m }) <= monthIndex(earliest);
+    $('heatmap-next').disabled = y === today.getFullYear() && m === today.getMonth();
+    renderHeatmapDayInfo();
+  }
+  function shiftHeatmapMonth(delta) {
+    const today = new Date();
+    let idx = monthIndex(heatmapView) + delta;
+    const minIdx = monthIndex(heatmapEarliestMonth());
+    const maxIdx = monthIndex({ y: today.getFullYear(), m: today.getMonth() });
+    if (idx < minIdx || idx > maxIdx) return;
+    heatmapView.y = Math.floor(idx / 12);
+    heatmapView.m = idx % 12;
+    heatmapView.picked = null;
+    renderHeatmapMonth();
+  }
+  function openHeatmapModal() {
     const total = Object.values(state.studyLog).reduce((a, b) => a + b, 0);
     const activeDays = Object.keys(state.studyLog).length;
     const allCounts = Object.values(state.studyLog);
@@ -3839,56 +3934,17 @@
         <div class="hm-stat"><div class="hm-stat-val">${maxStreak}</div><div class="hm-stat-label">最长连续</div></div>
       </div>`;
 
-    const weeks = Math.ceil((days + (today.getDay() + 1)) / 7);
-    const colors = ['#ebedf0', '#9be9a8', '#40c463', '#30a14e', '#216e39'];
-
-    // 月份标签
-    const todayStr = localDateStr(today);
-    let monthLabels = '<div class="hm-month-row"><div class="hm-day-label-spacer"></div>';
-    let lastMonth = -1;
-    const d = new Date(start);
-    for (let w = 0; w < weeks; w++) {
-      const m = d.getMonth();
-      if (m !== lastMonth) {
-        monthLabels += `<div class="hm-month-label">${m + 1}月</div>`;
-        lastMonth = m;
-      } else {
-        monthLabels += '<div class="hm-month-label"></div>';
-      }
-      d.setDate(d.getDate() + 7);
-    }
-    monthLabels += '</div>';
-
-    // 主网格（带星期标签）
-    let html = '<div class="hm-wrap">' + monthLabels;
-    html += '<div class="hm-grid-row"><div class="hm-day-labels">';
-    const dayLabels = ['日', '', '二', '', '四', '', '六'];
-    for (const dl of dayLabels) html += `<div class="hm-day-label">${dl}</div>`;
-    html += '</div><div class="heatmap-grid" style="grid-template-columns: repeat(' + weeks + ', 1fr);">';
-
-    const d2 = new Date(start);
-    for (let i = 0; i < weeks * 7; i++) {
-      const dateStr = localDateStr(d2);
-      const count = state.studyLog[dateStr] || 0;
-      const isFuture = d2 > today;
-      const isToday = dateStr === todayStr;
-      let color = '#ebedf0';
-      if (count > 0 && !isFuture) {
-        const idx = Math.min(4, Math.ceil(count / 5));
-        color = colors[idx];
-      }
-      const title = isFuture ? '' : `${dateStr}: ${count} 题`;
-      const cls = 'heatmap-cell' + (isToday ? ' today' : '') + (isFuture ? ' future' : '');
-      html += `<div class="${cls}" style="background:${color};" title="${title}"></div>`;
-      d2.setDate(d2.getDate() + 1);
-    }
-    html += '</div></div></div>';
-    container.innerHTML = html;
+    const now = new Date();
+    heatmapView.y = now.getFullYear();
+    heatmapView.m = now.getMonth();
+    heatmapView.picked = null;
+    renderHeatmapMonth();
     $('heatmap-modal').style.display = 'flex';
   }
 
   // ===== 收藏夹弹窗 =====
   function openFavoritesModal() {
+    markBadgeSeen('favorites-badge');
     const list = $('favorites-list');
     const favs = Object.values(state.favorites);
     if (favs.length === 0) {
@@ -3916,10 +3972,7 @@
     $('favorites-modal').style.display = 'flex';
   }
   function updateFavoritesBadge() {
-    const count = Object.keys(state.favorites).length;
-    const badge = $('favorites-badge');
-    if (count > 0) { badge.textContent = count; badge.style.display = 'flex'; }
-    else badge.style.display = 'none';
+    paintBadge('favorites-badge', Object.keys(state.favorites).length);
   }
   function startFavoritesReview() {
     const favs = Object.values(state.favorites);
@@ -3936,34 +3989,78 @@
   }
 
   // ===== 首页徽章（等级/XP/打卡）=====
-  function renderHomeBadges() {
-    const container = $('home-badges');
-    if (!container) return;
+  // ===== 顶栏：等级 / XP 进度 / 连续打卡 chip =====
+  function renderHeaderMeta() {
+    const lvl = $('hdr-level');
+    if (!lvl) return;
     const xpNeeded = xpForLevel(state.level);
-    const xpPct = Math.min(100, Math.round((state.xp / xpNeeded) * 100));
-    container.innerHTML = `
-      <div class="home-badge">
-        <div class="badge-icon">🏆</div>
-        <div class="badge-text">
-          <div class="badge-title">Lv.${state.level}</div>
-          <div class="xp-bar"><div class="xp-fill" style="width:${xpPct}%"></div></div>
-          <div class="xp-label">${state.xp}/${xpNeeded} XP</div>
-        </div>
-      </div>
-      <div class="home-badge">
-        <div class="badge-icon">🔥</div>
-        <div class="badge-text">
-          <div class="badge-title">连续打卡</div>
-          <div class="badge-value">${state.streakDays} 天</div>
-        </div>
-      </div>
-    `;
+    lvl.textContent = 'Lv.' + state.level;
+    const fill = $('hdr-xp-fill');
+    if (fill) fill.style.width = Math.min(100, Math.round((state.xp / xpNeeded) * 100)) + '%';
+    const label = $('hdr-xp-label');
+    if (label) label.textContent = state.xp + '/' + xpNeeded;
+    const streak = $('hdr-streak');
+    if (streak) streak.textContent = state.streakDays + ' 天';
   }
 
-  // ===== 每日一言 =====
-  function renderDailyQuote() {
-    const el = $('daily-quote');
-    if (el) el.textContent = getDailyQuote();
+  // ===== 首页可折叠区块：刷题设置 / 考试倒计时 / 更多工具 =====
+  const HOME_FOLDS_STORAGE = 'quiz-home-folds';
+  const homeFolds = (function () {
+    try { return JSON.parse(localStorage.getItem(HOME_FOLDS_STORAGE)) || {}; } catch (e) { return {}; }
+  })();
+  function saveHomeFolds() {
+    try { localStorage.setItem(HOME_FOLDS_STORAGE, JSON.stringify(homeFolds)); } catch (e) {}
+  }
+  function setFoldOpen(id, open) {
+    const fold = $(id);
+    if (fold) fold.classList.toggle('fold-open', !!open);
+  }
+  // 折叠条摘要：题量 + 模式；套卷则显示卷名
+  function refreshSettingsFold() {
+    const fold = $('settings-fold');
+    if (!fold) return;
+    const subject = state.selectedSubject ? window.QUIZ_DATA[state.selectedSubject] : null;
+    const isPaper = isPaperBank(subject);
+    const isAss = !!(subject && subject.type === 'assessment');
+    fold.style.display = isAss ? 'none' : '';
+    const icon = $('settings-fold-icon');
+    const title = $('settings-fold-title');
+    const sum = $('settings-fold-sum');
+    if (isPaper) {
+      if (icon) icon.textContent = '📄';
+      if (title) title.textContent = '套卷模式';
+      const pt = $('paper-card-title');
+      if (sum) sum.textContent = pt ? pt.textContent : '';
+      setFoldOpen('settings-fold', true); // 套卷信息必须可见
+    } else {
+      if (icon) icon.textContent = '⚙️';
+      if (title) title.textContent = '刷题设置';
+      if (sum) sum.textContent = state.qty + ' 题 · ' + (state.mode === 'random' ? '随机' : '顺序');
+      setFoldOpen('settings-fold', homeFolds.settings);
+    }
+  }
+  function bindHomeFolds() {
+    [['settings-fold', 'settings'], ['countdown-fold', 'countdown']].forEach(([id, key]) => {
+      const head = $(id + '-head');
+      if (!head) return;
+      setFoldOpen(id, homeFolds[key]);
+      head.addEventListener('click', () => {
+        const fold = $(id);
+        const open = !fold.classList.contains('fold-open');
+        fold.classList.toggle('fold-open', open);
+        homeFolds[key] = open;
+        saveHomeFolds();
+      });
+    });
+    const moreBtn = $('tools-more-btn');
+    if (moreBtn) {
+      moreBtn.addEventListener('click', () => {
+        const row = moreBtn.closest('.action-row');
+        const open = row.classList.toggle('tools-open');
+        const label = $('tools-more-label');
+        if (label) label.textContent = open ? '收起工具' : '更多工具';
+      });
+    }
   }
 
   // ===== 标题打字机效果 =====
@@ -4001,6 +4098,14 @@
   function bindGamificationEvents() {
     $('achievement-btn').addEventListener('click', openAchievementModal);
     $('heatmap-btn').addEventListener('click', openHeatmapModal);
+    $('heatmap-prev').addEventListener('click', () => shiftHeatmapMonth(-1));
+    $('heatmap-next').addEventListener('click', () => shiftHeatmapMonth(1));
+    $('heatmap-grid').addEventListener('click', (e) => {
+      const cell = e.target.closest('.heatmap-cell[data-date]');
+      if (!cell || cell.classList.contains('future')) return;
+      heatmapView.picked = heatmapView.picked === cell.dataset.date ? null : cell.dataset.date;
+      renderHeatmapMonth();
+    });
     $('favorites-btn').addEventListener('click', openFavoritesModal);
     $('favorites-review-btn').addEventListener('click', startFavoritesReview);
     $('favorites-clear-btn').addEventListener('click', () => {
@@ -4026,7 +4131,7 @@
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
   // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
   // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
-  const APP_VERSION = '1.8.5';
+  const APP_VERSION = '1.8.6';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -4420,14 +4525,7 @@
   }
 
   function updatePortalBadge(count) {
-    const badge = $('portal-badge');
-    if (!badge) return;
-    if (count > 0) {
-      badge.textContent = count > 99 ? '99+' : count;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
+    paintBadge('portal-badge', count);
   }
 
   function portalItemStatus(item, markers) {
@@ -4558,6 +4656,7 @@
   }
 
   function openPortalModal() {
+    markBadgeSeen('portal-badge');
     $('portal-modal').style.display = 'flex';
     // 每次打开回到「全部 + 空搜索」：留着上次的关键词会让人以为仓库题库变少了
     const searchEl = $('portal-search');
@@ -4876,16 +4975,9 @@
       lyricsState.lib = (lib && typeof lib === 'object') ? lib : {};
     } catch (e) { lyricsState.lib = {}; }
     renderLyricsList();
-    updateLyricsBadge();
   }
   function saveLyricsLib() {
     idbSet(IDB_LYRICS_KEY, lyricsState.lib).catch(e => console.error('歌词库保存失败', e));
-    updateLyricsBadge();
-  }
-  function updateLyricsBadge() {
-    const n = Object.keys(lyricsState.lib).length;
-    const badge = $('lyrics-badge');
-    if (badge) { badge.textContent = String(n); badge.style.display = n ? '' : 'none'; }
   }
 
   // ---------- 歌词音频持久化 ----------
@@ -5656,8 +5748,9 @@
     updateStreak();
     hideDeletedBanks(); // 隐藏已放入回收站的题库
     renderSubjectList();
-    renderHomeBadges();
-    renderDailyQuote();
+    renderHeaderMeta();
+    bindHomeFolds();
+    refreshSettingsFold();
     renderExamCountdown();
     typewriterTitle();
     initSettings();
