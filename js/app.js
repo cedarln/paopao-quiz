@@ -22,7 +22,7 @@
     pendingImport: null, // 等待用户选择覆盖/追加的导入数据
     recycleBin: {}, // 回收站：key -> bankData（可恢复）
     hiddenKeys: {}, // 已彻底隐藏的题库 key（不可恢复，内置题库专用）
-    wrongBook: {}, // 错题本：key -> { subjectKey, id, question, options, answer, explanation, category, wrongCount, lastWrongAt }
+    wrongBook: {}, // 错题本：key -> { subjectKey, id, question, options, answer, explanation, category, wrongCount, lastWrongAt, stage, interval, reps, dueAt, mastered, lastReviewAt }
     isExam: false, // 是否为模拟考试模式
     examTimeLimit: 0, // 考试时长（秒），0 表示不限时
     examTimeLeft: 0, // 剩余秒数
@@ -34,6 +34,8 @@
     paperSectionTimeLeft: 0, // 当前分区剩余秒数
     paperPendingSection: null, // 分节弹窗中即将进入的分区下标
     reviewMode: false, // 当前是否为错题再练模式
+    srsMode: false, // 当前是否为间隔重复复习（只有这种会话会推进错题的复习调度）
+    srsApplied: false, // 本次复习是否已结算（防止退出时重复推进间隔）
     activeCategory: null, // 当前选中的题目分类筛选
     combo: 0, // 当前连击数
     xp: 0, // 经验值
@@ -57,6 +59,13 @@
   const FAVORITES_STORAGE = 'quiz-favorites';
   const STUDY_LOG_STORAGE = 'quiz-study-log';
   const BADGE_SEEN_STORAGE = 'quiz-badge-seen';
+
+  // ===== 间隔重复复习（错题本）=====
+  // 固定阶梯：答对升一级、答错回第一级，间隔就是阶梯上对应的天数。
+  // 不用 SM-2 的难度系数，是为了让用户一眼看懂「下次什么时候再见到这道题」。
+  const SRS_LADDER = [1, 3, 7, 15, 30, 60];
+  const SRS_GRADUATE_REPS = 3; // 连对 3 次标记为已掌握（留在本子里，不再进每日队列）
+  const SRS_DAY = 86400000;
 
   // ===== IndexedDB 题库存储 =====
   // 导入的题库（尤其是几千题的英语词库）体积可达数 MB，localStorage 配额只有约 5MB，
@@ -225,6 +234,12 @@
     const badge = $(id);
     if (!badge) return;
     badgeCounts[id] = count;
+    // 数量回落时同步下调已读水位：错题本的「今日待复习」每天都会减少，
+    // 水位停在高处会导致明天涨回来也不提示。
+    if (count < (badgeSeen[id] || 0)) {
+      badgeSeen[id] = count;
+      saveBadgeSeen();
+    }
     // 对应弹窗正开着 = 用户已经在看，直接记为已读（传送门是异步刷新的，
     // 只在点击那一刻记一次会漏掉随后加载出来的数量）
     const modal = $(BADGE_MODAL[id]);
@@ -666,9 +681,12 @@
       saveStats();
       logStudy();
       state.answeredSubjects[state.selectedSubject] = true;
-      addToWrongBook(state.selectedSubject, q);
+      // 再练/复习模式的 subjectKey 是临时题库，写进错题本会造出假条目；
+      // 间隔重复的调度统一在结算时按原 subjectKey 写回。
+      if (!state.reviewMode) addToWrongBook(state.selectedSubject, q);
       sfx.wrong();
     }
+    renderSrsHint(mastered);
     checkAchievements();
     const nextBtn = $('next-btn');
     nextBtn.disabled = false;
@@ -1782,7 +1800,9 @@
     checkAchievements();
 
     // 收集错题
-    if (!state.reviewMode) {
+    if (state.srsMode) {
+      applySrsResults();
+    } else if (!state.reviewMode) {
       collectWrongQuestions();
     }
 
@@ -2002,6 +2022,10 @@
       $('answer-result').style.display = 'none';
     }
 
+    // 间隔重复：切题先收起「下次复习」提示，作答后再显示
+    const srsHintEl = $('srs-next-hint');
+    if (srsHintEl) srsHintEl.style.display = 'none';
+
     // 更新按钮状态
     $('prev-btn').disabled = state.currentIndex === 0;
     const nextBtn = $('next-btn');
@@ -2189,6 +2213,7 @@
       : `<span>✗</span><span>回答错误，正确答案是 ${OPTION_LABELS[q.answer]}</span>`;
 
     $('result-explanation').textContent = q.explanation || '暂无解析';
+    renderSrsHint(isRight);
   }
 
   // ===== 上一题 / 下一题 =====
@@ -2451,8 +2476,10 @@
     reviewFilter = 'all';
     renderReview();
 
-    // 收集错题到错题本（错题再练模式下不重复收集）
-    if (!state.reviewMode) {
+    // 收集错题到错题本（错题再练模式下不重复收集；间隔重复复习改为推进调度）
+    if (state.srsMode) {
+      applySrsResults();
+    } else if (!state.reviewMode) {
       collectWrongQuestions();
     }
 
@@ -2767,7 +2794,11 @@
     state.paperSectionIndex = 0;
     state.paperSectionTimeLeft = 0;
     if (state.reviewMode) {
+      // 中途退出也要把已答的题结算掉，否则下次还得从头再练一遍
+      if (state.srsMode && !state.srsApplied) applySrsResults(true);
       state.reviewMode = false;
+      state.srsMode = false;
+      state.srsApplied = false;
       delete window.QUIZ_DATA['__wrongbook_review__'];
       state.selectedSubject = null;
       checkStartButton();
@@ -3221,6 +3252,104 @@
     } catch (e) {
       console.warn('加载错题本失败', e);
     }
+    migrateWrongBookSrs();
+  }
+
+  // 旧版本只记 wrongCount / lastWrongAt，没有调度字段。
+  // 迁移时一律置为「今天到期」：这些题本来就没复习过，不该凭空往后排。
+  function migrateWrongBookSrs() {
+    const now = Date.now();
+    let changed = 0;
+    Object.keys(state.wrongBook).forEach(key => {
+      const item = state.wrongBook[key];
+      if (!item || typeof item !== 'object') return;
+      if (typeof item.dueAt === 'number' && typeof item.stage === 'number') return;
+      item.stage = 0;
+      item.interval = SRS_LADDER[0];
+      item.reps = 0;
+      item.mastered = false;
+      item.dueAt = now;
+      changed++;
+    });
+    if (changed) {
+      saveWrongBook();
+      console.info(`错题本已启用间隔重复：${changed} 道旧错题排入今日复习`);
+    }
+  }
+
+  // 本地零点的天数差：dueAt 落在今天以前为负，今天为 0，明天为 1
+  function srsDayOffset(dueAt, now) {
+    const d = new Date(dueAt); d.setHours(0, 0, 0, 0);
+    const t = new Date(now); t.setHours(0, 0, 0, 0);
+    return Math.round((d - t) / SRS_DAY);
+  }
+
+  // 推进一道题的调度。right=true 升阶梯，false 回第一级并清掉连对与已掌握。
+  function srsSchedule(item, right, now) {
+    if (right) {
+      item.reps = (item.reps || 0) + 1;
+      item.stage = Math.min(SRS_LADDER.length - 1, (item.stage || 0) + 1);
+      item.interval = SRS_LADDER[item.stage];
+      item.dueAt = now + item.interval * SRS_DAY;
+      if (item.reps >= SRS_GRADUATE_REPS) item.mastered = true;
+    } else {
+      item.reps = 0;
+      item.stage = 0;
+      item.interval = SRS_LADDER[0];
+      item.dueAt = now + item.interval * SRS_DAY;
+      item.mastered = false;
+    }
+    item.lastReviewAt = now;
+    return item;
+  }
+
+  // 预览调度结果，不改动错题本本体（真正写回在复习结算时）
+  function srsPreview(item, right) {
+    return srsSchedule({
+      stage: item.stage || 0,
+      reps: item.reps || 0,
+      interval: item.interval || SRS_LADDER[0],
+      mastered: !!item.mastered
+    }, right, Date.now());
+  }
+
+  // 答完一道题立刻告诉用户「下次什么时候再见到它」，让间隔重复可感知
+  function renderSrsHint(isRight) {
+    const hint = $('srs-next-hint');
+    if (!hint) return;
+    if (!state.srsMode) { hint.style.display = 'none'; return; }
+    const q = state.questions[state.currentIndex];
+    const item = q ? state.wrongBook[wrongBookKey(q.subjectKey, q.id)] : null;
+    if (!item) { hint.style.display = 'none'; return; }
+    const nx = srsPreview(item, isRight);
+    let tail;
+    if (!isRight) tail = '连对清零，回到第一级';
+    else if (nx.mastered) tail = `连对 ${nx.reps} 次，标记为已掌握`;
+    else tail = `连对 ${nx.reps} 次`;
+    hint.innerHTML = `自动判定为「${isRight ? '记得' : '忘了'}」 → 下次复习 <b>${nx.interval} 天后</b>（${srsDateLabel(nx.dueAt)}） · ${tail}`;
+    hint.style.display = 'block';
+  }
+
+  // 按到期状态分组：今日待复习（含逾期）/ 还没到期 / 已掌握
+  function srsPartition() {
+    const now = Date.now();
+    const due = [], later = [], mastered = [];
+    Object.keys(state.wrongBook).forEach(key => {
+      const item = state.wrongBook[key];
+      if (!item) return;
+      const row = { key, item, offset: srsDayOffset(item.dueAt || now, now) };
+      if (item.mastered) mastered.push(row);
+      else if (row.offset <= 0) due.push(row);
+      else later.push(row);
+    });
+    const byDue = (a, b) => (a.item.dueAt || 0) - (b.item.dueAt || 0);
+    due.sort(byDue);           // 逾期最久的先复习
+    later.sort(byDue);
+    return { due, later, mastered };
+  }
+
+  function srsDueCount() {
+    return srsPartition().due.length;
   }
 
   function saveWrongBook() {
@@ -3234,9 +3363,14 @@
   // 将一道错题加入错题本
   function addToWrongBook(subjectKey, q) {
     const key = wrongBookKey(subjectKey, q.id);
+    const now = Date.now();
     if (state.wrongBook[key]) {
-      state.wrongBook[key].wrongCount = (state.wrongBook[key].wrongCount || 1) + 1;
-      state.wrongBook[key].lastWrongAt = Date.now();
+      const item = state.wrongBook[key];
+      item.wrongCount = (item.wrongCount || 1) + 1;
+      item.lastWrongAt = now;
+      // 又答错了：连对清零、回到第一级，已掌握的也拉回队列
+      srsSchedule(item, false, now);
+      item.dueAt = now; // 当天就可以再巩固一次
     } else {
       state.wrongBook[key] = {
         subjectKey: subjectKey,
@@ -3248,7 +3382,12 @@
         category: q.category || '',
         ...pickExtFields(q),
         wrongCount: 1,
-        lastWrongAt: Date.now()
+        lastWrongAt: now,
+        stage: 0,
+        interval: SRS_LADDER[0],
+        reps: 0,
+        mastered: false,
+        dueAt: now
       };
     }
   }
@@ -3291,36 +3430,93 @@
   function renderWrongBookList() {
     const container = $('wrongbook-list');
     if (!container) return;
-    const keys = Object.keys(state.wrongBook);
-    if (keys.length === 0) {
+    const { due, later, mastered } = srsPartition();
+    const total = due.length + later.length + mastered.length;
+
+    const dueN = $('wb-due-n'), allN = $('wb-all-n'), dueBtn = $('wb-due-btn');
+    if (dueN) dueN.textContent = due.length;
+    if (allN) allN.textContent = total;
+    if (dueBtn) dueBtn.disabled = due.length === 0;
+
+    if (total === 0) {
       container.innerHTML = '<div class="recycle-empty">错题本为空，去刷题收集错题吧～</div>';
       return;
     }
     container.innerHTML = '';
-    keys.forEach(key => {
-      const item = state.wrongBook[key];
-      const lastAt = item.lastWrongAt ? new Date(item.lastWrongAt).toLocaleString('zh-CN') : '';
-      const div = document.createElement('div');
-      div.className = 'recycle-item wrongbook-item';
-      div.innerHTML = `
-        <div class="recycle-item-icon">❌</div>
-        <div class="recycle-item-info">
-          <div class="recycle-item-name">${escapeHtml(item.question)}</div>
-          <div class="recycle-item-meta">错过 ${item.wrongCount || 1} 次 · ${lastAt}</div>
-        </div>
-        <div class="recycle-item-actions">
-          <button class="recycle-btn restore-btn wb-remove-btn" data-key="${key}" title="移除">✕ 移除</button>
-        </div>
-      `;
-      container.appendChild(div);
-    });
+
+    const group = (title, rows, dim) => {
+      if (!rows.length) return;
+      const head = document.createElement('div');
+      head.className = 'wb-group-title';
+      head.innerHTML = `<span>${title}</span><span class="wb-group-n">${rows.length} 道</span>`;
+      container.appendChild(head);
+      rows.forEach(({ key, item, offset }) => {
+        const bank = window.QUIZ_DATA[item.subjectKey];
+        const subjectName = (bank && bank.name) || item.subjectKey;
+        let tag;
+        if (item.mastered) {
+          tag = '<span class="wb-tag mastered">已掌握</span>';
+        } else if (offset < 0) {
+          tag = `<span class="wb-tag overdue">逾期 ${-offset} 天</span>`;
+        } else if (offset === 0) {
+          tag = '<span class="wb-tag due">今天到期</span>';
+        } else {
+          tag = `<span class="wb-tag">${offset} 天后 · ${srsDateLabel(item.dueAt)}</span>`;
+        }
+        const div = document.createElement('div');
+        div.className = 'recycle-item wrongbook-item' + (dim ? ' wb-item-graded' : '');
+        div.innerHTML = `
+          <div class="recycle-item-icon">${item.mastered ? '✅' : '❌'}</div>
+          <div class="recycle-item-info">
+            <div class="recycle-item-name">${escapeHtml(item.question)}</div>
+            <div class="recycle-item-meta">${escapeHtml(subjectName)} · 错过 ${item.wrongCount || 1} 次</div>
+          </div>
+          <div class="recycle-item-actions">
+            ${item.mastered ? `<button class="recycle-btn restore-btn wb-relearn-btn" data-key="${key}" title="拉回每日复习">↺ 重学</button>` : ''}
+            <button class="recycle-btn restore-btn wb-remove-btn" data-key="${key}" title="移除">✕ 移除</button>
+          </div>
+          <div class="wb-srs-meta">
+            ${tag}
+            <span class="wb-tag">间隔 ${item.interval || SRS_LADDER[0]} 天</span>
+            <span class="wb-tag">连对 ${item.reps || 0}</span>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    };
+
+    group('🔴 今天该复习了', due, false);
+    group('🟡 还没到期', later, true);
+    group('✅ 已掌握', mastered, true);
+
     container.querySelectorAll('.wb-remove-btn').forEach(btn => {
       btn.addEventListener('click', () => removeFromWrongBook(btn.dataset.key));
     });
+    container.querySelectorAll('.wb-relearn-btn').forEach(btn => {
+      btn.addEventListener('click', () => relearnWrongBookItem(btn.dataset.key));
+    });
   }
 
+  // 已掌握的题手动拉回队列：连对清零、回到第一级、今天到期
+  function relearnWrongBookItem(key) {
+    const item = state.wrongBook[key];
+    if (!item) return;
+    srsSchedule(item, false, Date.now());
+    item.dueAt = Date.now();
+    saveWrongBook();
+    renderWrongBookList();
+    updateWrongBookBadge();
+    showToast('已拉回今日复习');
+  }
+
+  function srsDateLabel(ts) {
+    const d = new Date(ts);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  }
+
+  // 角标只报「今日待复习」，不再是错题总数 —— 到期才提醒，复习完就安静
   function updateWrongBookBadge() {
-    paintBadge('wrongbook-badge', Object.keys(state.wrongBook).length);
+    paintBadge('wrongbook-badge', srsDueCount());
   }
 
   function openWrongBook() {
@@ -3333,16 +3529,17 @@
     $('wrongbook-modal').style.display = 'none';
   }
 
-  // 错题再练：用错题本中的题开始一次练习
-  function startWrongBookReview() {
-    const keys = Object.keys(state.wrongBook);
-    if (keys.length === 0) {
-      showToast('错题本为空');
+  // 错题复习：scope='due' 只练今日到期（含逾期），'all' 练全部未掌握 + 已掌握
+  function startWrongBookReview(scope) {
+    const { due, later, mastered } = srsPartition();
+    const rows = scope === 'due' ? due : due.concat(later, mastered);
+    if (rows.length === 0) {
+      showToast(scope === 'due' ? '今天没有到期的错题，明天再来～' : '错题本为空');
       return;
     }
     closeWrongBook();
-    // 构造临时题库
-    const questions = keys.map(k => state.wrongBook[k]).map((item, i) => ({
+    // 构造临时题库；subjectKey 必须带上，结算时靠它找回错题本里的原条目
+    const questions = rows.map(({ item }) => ({
       id: item.id,
       subjectKey: item.subjectKey,
       question: item.question,
@@ -3355,13 +3552,53 @@
     state.selectedSubject = '__wrongbook_review__';
     window.QUIZ_DATA = window.QUIZ_DATA || {};
     window.QUIZ_DATA['__wrongbook_review__'] = {
-      name: '错题再练',
-      icon: '❌',
-      description: '来自错题本的题目',
+      name: scope === 'due' ? '今日复习' : '错题再练',
+      icon: '📕',
+      description: '来自错题本的间隔重复队列',
       questions: questions
     };
+    // startQuiz() 会按 state.qty 截断、按 activeCategory 过滤，这里都要放开
+    state.activeCategory = null;
+    state.isExam = false;
+    state.mode = 'sequential';
+    state.qty = questions.length;
     state.reviewMode = true;
+    state.srsMode = true;
+    state.srsApplied = false;
     startQuiz();
+    showToast(scope === 'due' ? `今日复习：${questions.length} 道到期错题` : `错题再练：${questions.length} 道`);
+  }
+
+  // 复习结算：把本次对错写回调度。未作答 / 主观题未自评的题不动，避免凭空推进。
+  // partial=true 表示中途退出，只保存已答的部分。
+  function applySrsResults(partial) {
+    if (state.srsApplied) return;
+    state.srsApplied = true;
+    const now = Date.now();
+    let advanced = 0, reset = 0, graduated = 0;
+    state.questions.forEach((q, i) => {
+      const item = state.wrongBook[wrongBookKey(q.subjectKey, q.id)];
+      if (!item) return;
+      const ans = state.answers[i];
+      if (!ans || typeof ans.isRight !== 'boolean') return;
+      const wasMastered = !!item.mastered;
+      srsSchedule(item, ans.isRight, now);
+      if (ans.isRight) {
+        advanced++;
+        if (!wasMastered && item.mastered) graduated++;
+      } else {
+        reset++;
+        item.wrongCount = (item.wrongCount || 1) + 1;
+        item.lastWrongAt = now;
+      }
+    });
+    saveWrongBook();
+    updateWrongBookBadge();
+    const parts = [];
+    if (advanced) parts.push(`${advanced} 道延后复习`);
+    if (reset) parts.push(`${reset} 道明天再来`);
+    if (graduated) parts.push(`${graduated} 道标记已掌握`);
+    showToast(parts.length ? (partial ? '已保存本次复习：' : '复习完成：') + parts.join(' · ') : '复习完成');
   }
 
   function escapeHtml(str) {
@@ -3763,7 +4000,8 @@
     $('wrongbook-btn').addEventListener('click', openWrongBook);
     $('wrongbook-close-btn').addEventListener('click', closeWrongBook);
     $('wrongbook-clear-btn').addEventListener('click', clearWrongBook);
-    $('wrongbook-review-btn').addEventListener('click', startWrongBookReview);
+    $('wb-due-btn').addEventListener('click', () => startWrongBookReview('due'));
+    $('wb-all-btn').addEventListener('click', () => startWrongBookReview('all'));
     $('wrongbook-modal').addEventListener('click', (e) => {
       if (e.target.id === 'wrongbook-modal') closeWrongBook();
     });
@@ -4131,7 +4369,7 @@
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
   // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
   // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
-  const APP_VERSION = '1.8.6';
+  const APP_VERSION = '1.8.7';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -4320,6 +4558,16 @@
     }).catch(err => {
       setUpdateModalBusy(false);
       showToast('安装失败：' + (err && err.message ? err.message : '未知错误'));
+    });
+  }
+
+  // 跨天回到 App：到期队列会变，刷新角标；错题本正开着就重渲染
+  function bindSrsDayRefresh() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      updateWrongBookBadge();
+      const modal = $('wrongbook-modal');
+      if (modal && modal.style.display === 'flex') renderWrongBookList();
     });
   }
 
@@ -5763,6 +6011,7 @@
     bindGamificationEvents();
     bindPortalAndUpdateEvents();
     bindInstallResume();
+    bindSrsDayRefresh();
     bindCleanupModal();
     bindAndroidBackButton();
     checkLeftoverUpdates(); // 检查遗留更新包：已装完提示删除，没装完提示继续装

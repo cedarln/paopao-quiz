@@ -315,6 +315,7 @@
             <div class="result-header" id="result-header"></div>
             <div class="result-explanation" id="result-explanation"></div>
           </div>
+          <div class="srs-next-hint" id="srs-next-hint" style="display:none;"></div>
         </div>
 
         <div class="quiz-actions">
@@ -621,11 +622,14 @@
         <h3 class="modal-title">📕 错题本</h3>
         <button class="recycle-close" id="wrongbook-close-btn">✕</button>
       </div>
-      <p class="modal-desc">答错的题目会自动收集到这里，可移除或再练一次。</p>
+      <p class="modal-desc">答错自动收集，到期题目优先复习。</p>
+      <div class="wb-due-bar">
+        <button class="wb-due-btn primary" id="wb-due-btn"><span class="n" id="wb-due-n">0</span><span class="t">今日待复习</span></button>
+        <button class="wb-due-btn" id="wb-all-btn"><span class="n" id="wb-all-n">0</span><span class="t">全部错题</span></button>
+      </div>
       <div id="wrongbook-list" class="recycle-list"></div>
       <div class="recycle-modal-footer">
-        <button class="modal-btn full-width wb-review-btn" id="wrongbook-review-btn">📖 错题再练</button>
-        <button class="modal-btn full-width" id="wrongbook-clear-btn" style="margin-top:8px;">清空错题本</button>
+        <button class="modal-btn full-width" id="wrongbook-clear-btn">清空错题本</button>
       </div>
     </div>
   </div>

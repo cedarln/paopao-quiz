@@ -1,6 +1,6 @@
 {
   "name": "paopao-quiz",
-  "version": "1.8.6",
+  "version": "1.8.7",
   "description": "泡泡题库 · 移动端刷题与语言学习：教资 / 日语 JLPT / 英语词汇 / 性格职业测评，自定义题库导入、错题本、模拟套卷、日语/韩语歌词精读",
   "main": "index.js",
   "scripts": {

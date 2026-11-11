@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.8.6-orange)
+![Version](https://img.shields.io/badge/version-1.8.7-orange)
 
 ---
 
@@ -12,7 +12,7 @@
 
 - **刷题**：顺序 / 随机，即时判分与解析，按分类筛选、关键词搜索
 - **模拟考试与套卷**：自定义题量时长；带分节预设的套卷按卷面顺序、分节计时
-- **错题本 / 收藏夹 / 回收站**：答错自动收集，可再练、可恢复
+- **错题本 / 收藏夹 / 回收站**：答错自动收集，按间隔重复安排每日复习，连对 3 次标记已掌握；可再练、可恢复
 - **题库导入**：JSON 格式，任意科目；支持覆盖或追加
 - **在线题库**：应用内直接浏览、加载、更新本仓库 `quizzes/` 下的题库
 - **日语 / 英语学习**：JLPT N5 全项、N5 模拟卷、N3/N4N5 词汇，高考与考研英语词汇，听力题支持音频
@@ -88,10 +88,11 @@ cd android && ./gradlew assembleRelease
 
 ## 📦 版本
 
-当前版本 **v1.8.6**，完整安装包与历史版本见 [Releases](https://github.com/cedarln/paopao-quiz/releases)。
+当前版本 **v1.8.7**，完整安装包与历史版本见 [Releases](https://github.com/cedarln/paopao-quiz/releases)。
 
 这里只记录改动较大的版本：
 
+- **v1.8.7** — 错题本升级为间隔重复复习：到期题目排成每日队列，答对延后、答错回炉，连对 3 次标记已掌握；全局文字对比度修复
 - **v1.8.6** — 首页整体瘦身重排；学习日历改月视图；角标已读即隐；深色主题可读性修复
 - **v1.8.5** — 精听改成盲听：先听再看，逐句揭示，可重听与本句循环
 - **v1.8.3** — 韩语歌词支持：罗马字读音与中文谐音

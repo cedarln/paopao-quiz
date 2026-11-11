@@ -19,7 +19,7 @@
   --card-bg: #ffffff;
   --text-primary: #1f2937;
   --text-secondary: #6b7280;
-  --text-muted: #9ca3af;
+  --text-muted: #6b7280;
   --border: #e5e7eb;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -55,7 +55,7 @@
   --card-bg: #1e293b;
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-muted: #94a3b8;
   --border: #334155;
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -631,6 +631,8 @@ body.custom-bg::before {
 
 .exam-start-btn:disabled {
   background: #d1d5db;
+  /* 禁用也要能读：白字压在浅灰底上对比只有 1.47 */
+  color: #374151;
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -642,6 +644,7 @@ body.custom-bg::before {
 
 .start-btn:disabled {
   background: #d1d5db;
+  color: #374151;
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -1102,10 +1105,16 @@ body.custom-bg::before {
   min-width: 26px;
   border-radius: 50%;
   background: #e5e7eb;
-  color: var(--text-secondary);
+  /* 选项字母用固定深灰，别跟着 text-secondary 在各主题里飘（灰上灰会掉到 2.07） */
+  color: #374151;
   font-size: 14px;
   font-weight: 700;
   transition: all 0.2s ease;
+}
+
+[data-theme="dark"] .option-label {
+  background: #334155;
+  color: #cbd5e1;
 }
 
 .option-item.selected .option-label {
@@ -1113,13 +1122,20 @@ body.custom-bg::before {
   color: white;
 }
 
+[data-theme="dark"] .option-item.selected .option-label {
+  /* 深色主题的 --primary 偏亮，白字只有 2.98 */
+  background: #4f46e5;
+}
+
 .option-item.correct .option-label {
-  background: var(--success);
+  /* 白字在 #10b981 上只有 2.54，用 emerald-700 是 5.48 */
+  background: #047857;
   color: white;
 }
 
 .option-item.wrong .option-label {
-  background: var(--error);
+  /* 白字在 #ef4444 上是 3.76，red-600 是 4.83 */
+  background: #dc2626;
   color: white;
 }
 
@@ -1162,11 +1178,20 @@ body.custom-bg::before {
 }
 
 .answer-result.correct .result-header {
+  color: #065f46;
+}
+
+[data-theme="dark"] .answer-result.correct .result-header {
   color: var(--success);
 }
 
 .answer-result.wrong .result-header {
-  color: var(--error);
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .answer-result.wrong .result-header {
+  /* --error 压深色红底只有 4.37，再提亮一档 */
+  color: #fca5a5;
 }
 
 .result-explanation {
@@ -1313,6 +1338,11 @@ body.custom-bg::before {
 }
 
 .detail-value.correct {
+  /* 22px 大字也要 3.0：#10b981 只有 2.54 */
+  color: #047857;
+}
+
+[data-theme="dark"] .detail-value.correct {
   color: var(--success);
 }
 
@@ -1440,14 +1470,24 @@ body.custom-bg::before {
   line-height: 1.5;
 }
 
+/* 浅色主题里 --success/--error 直接放在浅色底上不够 4.5，浅色用 -700/-600 深色阶；
+   深色主题的 --success/--error 本来就是提亮版，覆盖回去。 */
 .review-answer .correct-answer {
-  color: var(--success);
+  color: #047857;
   font-weight: 600;
 }
 
+[data-theme="dark"] .review-answer .correct-answer {
+  color: var(--success);
+}
+
 .review-answer .wrong-answer {
-  color: var(--error);
+  color: #dc2626;
   font-weight: 600;
+}
+
+[data-theme="dark"] .review-answer .wrong-answer {
+  color: var(--error);
 }
 
 /* ===== 响应式 ===== */
@@ -1524,6 +1564,7 @@ body.custom-bg::before {
    注意：.import-btn 为了水波纹效果设了 overflow:hidden（见下方「点击波纹」一节），
    过去角标用 top/right:-6px 探到按钮外面，整块被裁得只剩左下角。
    这里改成贴在按钮内侧角落 + 白色描边，既完整显示，又能和水波纹共存。 */
+/* 角标白字：#ef4444 上只有 3.76，压深到 red-600 是 4.83 */
 .recycle-badge {
   position: absolute;
   top: 4px;
@@ -1531,7 +1572,7 @@ body.custom-bg::before {
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  background: #ef4444;
+  background: #dc2626;
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.92);
   border-radius: 9px;
@@ -1699,17 +1740,31 @@ body.custom-bg::before {
   margin-bottom: 12px;
 }
 
+/* 按钮不会继承父级 color，不显式声明就会用浏览器默认的黑字，
+   深色主题下卡片底色也是深的 → 纯文字按钮整块看不见字。 */
 .modal-btn {
   flex: 1;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   padding: 14px 16px;
   border: 2px solid var(--border);
   border-radius: 12px;
   background: var(--card-bg);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
+  text-align: center;
+}
+
+/* 覆盖/追加是「图标 + 两行文字」的卡片式按钮，保持左对齐 */
+.modal-btn.overwrite-btn,
+.modal-btn.append-btn {
+  justify-content: flex-start;
   text-align: left;
 }
 
@@ -1930,6 +1985,153 @@ body.custom-bg::before {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%) !important;
   color: white !important;
 }
+
+/* ===== 间隔重复复习：到期入口 + 分组 + 调度标签 ===== */
+.wb-due-bar {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.wb-due-btn {
+  flex: 1;
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text-primary);
+  border-radius: 12px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  font-family: inherit;
+}
+
+.wb-due-btn.primary {
+  background: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: #fff;
+}
+
+/* 深色主题的 --primary-dark 偏亮，白字对比只有 4.47，再压深一档到 6.3 */
+[data-theme="dark"] .wb-due-btn.primary {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.wb-due-btn:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.wb-due-btn .n {
+  display: block;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.wb-due-btn .t {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: .85;
+}
+
+.wb-group-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-secondary);
+}
+
+.wb-group-title .wb-group-n {
+  font-weight: 600;
+}
+
+.wb-srs-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+/* 弹窗内容区只有 250px 左右，沿用回收站的单行布局会把题干挤成七个字。
+   错题行改成两行：上行题干+操作，下行调度标签占满整宽。 */
+.wrongbook-item {
+  flex-wrap: wrap;
+  row-gap: 6px;
+  padding: 10px 12px;
+}
+
+.wrongbook-item .recycle-item-icon {
+  font-size: 18px;
+}
+
+.wrongbook-item .recycle-item-info {
+  min-width: 0;
+}
+
+.wrongbook-item .recycle-item-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+  line-height: 1.35;
+}
+
+.wrongbook-item .recycle-item-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wrongbook-item .recycle-item-actions {
+  gap: 4px;
+}
+
+.wrongbook-item .recycle-btn {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+.wrongbook-item .wb-srs-meta {
+  flex: 1 0 100%;
+  margin-top: 0;
+}
+
+.wb-tag {
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 1px 8px;
+  background: var(--card-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+
+/* 标签自带底色与字色，四套主题下都保持同样的可读对比 */
+.wb-tag.due { background: #fef3c7; border-color: #fcd34d; color: #92400e; }
+.wb-tag.overdue { background: #fee2e2; border-color: #fca5a5; color: #991b1b; }
+.wb-tag.mastered { background: #dcfce7; border-color: #86efac; color: #166534; }
+
+.wb-item-graded { opacity: .62; }
+
+.srs-next-hint {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--soft-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+/* 强调数字要在浅底上压深、在深底上提亮，四套主题才都够对比 */
+.srs-next-hint b { color: var(--primary-dark); }
+[data-theme="dark"] .srs-next-hint b { color: var(--primary-light); }
 
 .exam-timer-bar {
   display: flex;
@@ -2170,6 +2372,19 @@ body.custom-bg::before {
   color: white;
   font-size: 11px;
   font-weight: 700;
+}
+
+/* 深色主题 --primary 偏亮，白字压上去只有 2.98，压回靛蓝-600；aurora/sunset 的主题色也达不到 4.5 */
+[data-theme="dark"] .paper-section-badge {
+  background: #4f46e5;
+}
+
+[data-theme="aurora"] .paper-section-badge {
+  background: #047857;
+}
+
+[data-theme="sunset"] .paper-section-badge {
+  background: #c2410c;
 }
 
 .paper-section-name {
@@ -3215,6 +3430,21 @@ body.custom-bg::before {
   color: #ffffff;
 }
 
+[data-theme="dark"] .review-filter.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+[data-theme="aurora"] .review-filter.active {
+  background: #047857;
+  border-color: #047857;
+}
+
+[data-theme="sunset"] .review-filter.active {
+  background: #c2410c;
+  border-color: #c2410c;
+}
+
 .review-options {
   margin-top: 8px;
   display: flex;
@@ -3232,14 +3462,22 @@ body.custom-bg::before {
 }
 
 .review-option.correct {
-  color: #059669;
+  color: #047857;
   background: rgba(16, 185, 129, 0.12);
   font-weight: 600;
 }
 
+[data-theme="dark"] .review-option.correct {
+  color: #34d399;
+}
+
 .review-option.user-wrong {
-  color: #dc2626;
+  color: #b91c1c;
   background: rgba(239, 68, 68, 0.10);
+}
+
+[data-theme="dark"] .review-option.user-wrong {
+  color: #f87171;
 }
 
 .review-explanation {
@@ -3472,7 +3710,8 @@ body.custom-bg::before {
   font-size: 11px;
   padding: 2px 6px;
   background: #fee2e2;
-  color: #dc2626;
+  /* red-600 压红-100 只有 3.95，用 red-700 */
+  color: #b91c1c;
   border-radius: 4px;
   margin-right: 6px;
   font-weight: 500;
@@ -3499,7 +3738,8 @@ body.custom-bg::before {
 
 .countdown-days strong {
   font-size: 18px;
-  color: #d97706;
+  /* amber-600 压琥珀卡底只有 2.56，和标题统一用琥珀-900 */
+  color: #92400e;
 }
 
 .countdown-empty {
@@ -3642,7 +3882,13 @@ body.custom-bg::before {
 .lyrics-card-del:active { background: var(--error); color: #fff; border-color: var(--error); }
 .lyrics-card-proof {
   display: inline-block; font-size: 10px; padding: 1px 6px; border-radius: 5px;
-  background: rgba(245,158,11,.15); color: var(--warning); border: 1px solid rgba(245,158,11,.3);
+  /* 「未校对」原来是 warning 黄字压浅黄底（1.92），换成琥珀-900 深字 */
+  background: rgba(245,158,11,.15); color: #92400e; border: 1px solid rgba(245,158,11,.3);
+}
+
+[data-theme="dark"] .lyrics-card-proof {
+  /* 深色底上琥珀-900 反而看不见，用回提亮版琥珀 */
+  color: var(--warning);
 }
 
 /* ---------- 子视图 B：精读器 ---------- */
@@ -3681,6 +3927,29 @@ body.custom-bg::before {
   transition: all .15s;
 }
 .lyrics-mode-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+[data-theme="dark"] .lyrics-mode-tab.active { background: #4f46e5; border-color: #4f46e5; }
+[data-theme="aurora"] .lyrics-mode-tab.active { background: #047857; border-color: #047857; }
+[data-theme="sunset"] .lyrics-mode-tab.active { background: #c2410c; border-color: #c2410c; }
+
+/* ===== 主题色强调文字压白底不够 4.5：aurora/sunset 的强调数字与徽章用 -700 深色阶 ===== */
+[data-theme="aurora"] .subject-count,
+[data-theme="aurora"] .stat-value,
+[data-theme="aurora"] .lob-reset,
+[data-theme="aurora"] .llb-badge {
+  color: #047857;
+}
+
+[data-theme="sunset"] .subject-count,
+[data-theme="sunset"] .stat-value,
+[data-theme="sunset"] .lob-reset,
+[data-theme="sunset"] .llb-badge {
+  color: #c2410c;
+}
+
+/* sunset 主题色压淡紫徽章底只有 4.32，再压深一档 */
+[data-theme="sunset"] .llb-badge {
+  color: #9a3412;
+}
 
 /* 时间轴 */
 .lyrics-timeline { padding: 10px 16px 6px; background: var(--card-bg); flex-shrink: 0; }
