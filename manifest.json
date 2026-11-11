@@ -1,7 +1,7 @@
 {
   "name": "泡泡题库",
-  "short_name": "教资刷题",
-  "description": "教师资格证考试刷题应用，一题一页，高效备考",
+  "short_name": "泡泡题库",
+  "description": "移动端刷题与语言学习：教资 / 日语 JLPT / 英语词汇 / 性格职业测评，自定义题库导入、错题本、模拟套卷、日语/韩语歌词精读",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f5f7fa",

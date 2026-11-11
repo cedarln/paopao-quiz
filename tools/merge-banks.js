@@ -30,7 +30,7 @@ const DATA_DIR = path.join(ROOT, 'js', 'data');
 const QUIZZES_DIR = path.join(ROOT, 'quizzes');
 
 // 需要派生的题库注册表
-//   jsonFile     —— tmp-build/ 下的源文件（编写态）
+//   jsonFile     —— tmp-build/ 下的源文件（编写态，只留本地不入库；缺失时自动退回 quizzes/ 同 key 镜像）
 //   fromQuiz     —— 没有源文件时，直接从 quizzes/ 里已上线的镜像文件名取内容（发布态）
 //   jsFilename   —— 内置 JS 文件名；null 表示只做在线镜像、不内置
 //   mergeWith    —— 再合并一个题目数组文件，合并时自动续排 id
@@ -117,15 +117,35 @@ function readJSON(file) {
   }
 }
 
+// 按 key 找 quizzes/ 里已上线的镜像文件名；找不到返回 null（不像 resolveMirrorName 会造名字）
+function findMirrorByKey(key) {
+  const entries = fs.existsSync(QUIZZES_DIR) ? fs.readdirSync(QUIZZES_DIR) : [];
+  const byTilde = entries.filter(f => f.endsWith('.json') && f.slice(0, -5).split('~').pop() === key);
+  if (byTilde.length === 1) return byTilde[0];
+  if (entries.includes(`${key}.json`)) return `${key}.json`;
+  return null;
+}
+
 function loadSource(config) {
   if (config.fromQuiz) {
     const r = readJSON(path.join(QUIZZES_DIR, config.fromQuiz));
     if (r.error) return r;
     return { data: r.data, origin: `quizzes/${config.fromQuiz}` };
   }
-  const r = readJSON(path.join(TMP, config.jsonFile));
-  if (r.error) return r;
-  return { data: r.data, origin: `tmp-build/${config.jsonFile}` };
+  const local = path.join(TMP, config.jsonFile);
+  if (fs.existsSync(local)) {
+    const r = readJSON(local);
+    if (r.error) return r;
+    return { data: r.data, origin: `tmp-build/${config.jsonFile}` };
+  }
+  // tmp-build/ 是本地编写态草稿，已不入库（见 .gitignore）。新克隆没有这个目录时，
+  // 退回 quizzes/ 里同 key 的已上线镜像 —— 两者内容一致，派生结果不变。
+  const mirror = findMirrorByKey(config.jsKey);
+  if (mirror) {
+    const r = readJSON(path.join(QUIZZES_DIR, mirror));
+    if (!r.error) return { data: r.data, origin: `quizzes/${mirror}（本地草稿缺失，退回镜像）` };
+  }
+  return { error: `文件不存在：tmp-build/${config.jsonFile}，且 quizzes/ 里没有 key 为 ${config.jsKey} 的镜像` };
 }
 
 // 内置 JS 与在线镜像共用的「题库骨架」：除题目外只带 App 认识的顶层字段
@@ -229,10 +249,11 @@ function main() {
   console.log(`${opts.dryRun ? '🔍 DRY-RUN（不写盘）' : '🔄 派生题库'}：${targets.length} 个注册项\n`);
 
   for (const config of targets) {
-    console.log(`处理: ${config.jsKey}  ← ${config.fromQuiz ? 'quizzes/' + config.fromQuiz : 'tmp-build/' + config.jsonFile}`);
+    console.log(`处理: ${config.jsKey}`);
 
     const loaded = loadSource(config);
     if (loaded.error) { problems.push(`${config.jsKey}：${loaded.error}`); console.log('  ❌ ' + loaded.error); continue; }
+    console.log(`  源: ${loaded.origin}`);
     const bankData = loaded.data;
 
     if (!Array.isArray(bankData.questions) || !bankData.questions.length) {

@@ -33,6 +33,10 @@ download.html
 tmp/
 *.tmp
 
+# 题库编写态草稿（内容与 quizzes/ 公开镜像一致，只留本地；
+# tools/merge-banks.js 已改为直接从 quizzes/ 取源，新克隆不需要这个目录）
+tmp-build/
+
 # 签名密钥（绝不入库，见 app/build.gradle「签名配置」）
 keystore/
 keystore.properties

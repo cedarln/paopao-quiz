@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.8.5-orange)
+![Version](https://img.shields.io/badge/version-1.8.6-orange)
 
 ---
 
@@ -15,9 +15,9 @@
 - **错题本 / 收藏夹 / 回收站**：答错自动收集，可再练、可恢复
 - **题库导入**：JSON 格式，任意科目；支持覆盖或追加
 - **在线题库**：应用内直接浏览、加载、更新本仓库 `quizzes/` 下的题库
-- **日语学习**：JLPT N5 全项、N5 模拟卷、N3/N4N5 词汇，听力题支持音频
-- **歌词精读**：导入本地歌词 JSON / zip 歌曲包，逐句假名、中文翻译、点词解析与语法卡片
-- **个性化**：4 套主题、自定义图片/视频背景、学习统计与打卡
+- **日语 / 英语学习**：JLPT N5 全项、N5 模拟卷、N3/N4N5 词汇，高考与考研英语词汇，听力题支持音频
+- **歌词精读**：导入本地歌词 JSON / zip 歌曲包，日语逐句假名、韩语罗马字与中文谐音，配中文翻译、点词解析与语法卡片；精听为盲听模式，先听再逐句揭示
+- **个性化**：4 套主题、自定义图片/视频背景、学习统计、月视图学习日历与打卡
 
 ## 📥 安装与更新
 
