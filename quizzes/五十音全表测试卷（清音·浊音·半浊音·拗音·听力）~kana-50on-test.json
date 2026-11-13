@@ -1,0 +1,1514 @@
+{
+  "key": "kana-50on-test",
+  "name": "五十音全表测试卷（清音·浊音·半浊音·拗音·听力）",
+  "icon": "📝",
+  "category": "language",
+  "version": "1.0",
+  "description": "原创模拟卷，非真题。7 节 110 题：清音平假名 20、清音片假名 20、浊音半浊音 16、拗音 22、汉字例词读音 12、听力听音选假名 12、听力听词选汉字 8。听力题带音频文件，需将 audio/ 与 JSON 一起发布后才有声。",
+  "exam": {
+    "count": 110,
+    "minutes": 60,
+    "preserveOrder": true,
+    "passScore": 80,
+    "description": "七节：平假名认读 20 题 → 片假名认读 20 题 → 浊音半浊音 16 题 → 拗音 22 题 → 汉字例词读音 12 题 → 听力假名 12 题 → 听力词 8 题。每节独立计时，本节结束不可回看。",
+    "sections": [
+      {
+        "name": "清音·平假名认读",
+        "count": 20,
+        "minutes": 12
+      },
+      {
+        "name": "清音·片假名认读",
+        "count": 20,
+        "minutes": 12
+      },
+      {
+        "name": "浊音·半浊音",
+        "count": 16,
+        "minutes": 10
+      },
+      {
+        "name": "拗音",
+        "count": 22,
+        "minutes": 12
+      },
+      {
+        "name": "汉字例词读音",
+        "count": 12,
+        "minutes": 8
+      },
+      {
+        "name": "听力·听音选假名",
+        "count": 12,
+        "minutes": 6
+      },
+      {
+        "name": "听力·听词选汉字",
+        "count": 8,
+        "minutes": 2
+      }
+    ]
+  },
+  "questions": [
+    {
+      "id": 1,
+      "category": "清音·平假名认读",
+      "question": "平假名「し」对应的片假名是哪一个？",
+      "options": [
+        "ツ",
+        "シ",
+        "チ",
+        "ス"
+      ],
+      "answer": 1,
+      "explanation": "「し」读 shi，片假名写作「シ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 2,
+      "category": "清音·平假名认读",
+      "question": "平假名「ち」对应的片假名是哪一个？",
+      "options": [
+        "チ",
+        "ツ",
+        "シ",
+        "テ"
+      ],
+      "answer": 0,
+      "explanation": "「ち」读 chi，片假名写作「チ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 3,
+      "category": "清音·平假名认读",
+      "question": "平假名「つ」对应的片假名是哪一个？",
+      "options": [
+        "シ",
+        "ツ",
+        "ス",
+        "テ"
+      ],
+      "answer": 1,
+      "explanation": "「つ」读 tsu，片假名写作「ツ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 4,
+      "category": "清音·平假名认读",
+      "question": "平假名「ふ」对应的片假名是哪一个？",
+      "options": [
+        "フ",
+        "ブ",
+        "プ",
+        "ネ"
+      ],
+      "answer": 0,
+      "explanation": "「ふ」读 fu，片假名写作「フ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 5,
+      "category": "清音·平假名认读",
+      "question": "平假名「を」对应的片假名是哪一个？",
+      "options": [
+        "ヲ",
+        "オ",
+        "ウ",
+        "ミ"
+      ],
+      "answer": 0,
+      "explanation": "「を」读 o，片假名写作「ヲ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 6,
+      "category": "清音·平假名认读",
+      "question": "平假名「ん」对应的片假名是哪一个？",
+      "options": [
+        "ソ",
+        "ン",
+        "ノ",
+        "モ"
+      ],
+      "answer": 1,
+      "explanation": "「ん」读 n，片假名写作「ン」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 7,
+      "category": "清音·平假名认读",
+      "question": "平假名「や」对应的片假名是哪一个？",
+      "options": [
+        "ヤ",
+        "ユ",
+        "ヨ",
+        "キ"
+      ],
+      "answer": 0,
+      "explanation": "「や」读 ya，片假名写作「ヤ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 8,
+      "category": "清音·平假名认读",
+      "question": "平假名「ゆ」对应的片假名是哪一个？",
+      "options": [
+        "ユ",
+        "ヤ",
+        "ヨ",
+        "ハ"
+      ],
+      "answer": 0,
+      "explanation": "「ゆ」读 yu，片假名写作「ユ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 9,
+      "category": "清音·平假名认读",
+      "question": "平假名「よ」对应的片假名是哪一个？",
+      "options": [
+        "ヨ",
+        "ヤ",
+        "ユ",
+        "ラ"
+      ],
+      "answer": 0,
+      "explanation": "「よ」读 yo，片假名写作「ヨ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 10,
+      "category": "清音·平假名认读",
+      "question": "平假名「わ」对应的片假名是哪一个？",
+      "options": [
+        "ウ",
+        "ヲ",
+        "ワ",
+        "リ"
+      ],
+      "answer": 2,
+      "explanation": "「わ」读 wa，片假名写作「ワ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 11,
+      "category": "清音·平假名认读",
+      "question": "平假名「か」对应的片假名是哪一个？",
+      "options": [
+        "タ",
+        "ガ",
+        "カ",
+        "イ"
+      ],
+      "answer": 2,
+      "explanation": "「か」读 ka，片假名写作「カ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 12,
+      "category": "清音·平假名认读",
+      "question": "平假名「き」对应的片假名是哪一个？",
+      "options": [
+        "キ",
+        "ギ",
+        "サ",
+        "メ"
+      ],
+      "answer": 0,
+      "explanation": "「き」读 ki，片假名写作「キ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 13,
+      "category": "清音·平假名认读",
+      "question": "平假名「く」对应的片假名是哪一个？",
+      "options": [
+        "ケ",
+        "グ",
+        "ク",
+        "ワ"
+      ],
+      "answer": 2,
+      "explanation": "「く」读 ku，片假名写作「ク」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 14,
+      "category": "清音·平假名认读",
+      "question": "平假名「け」对应的片假名是哪一个？",
+      "options": [
+        "モ",
+        "ゲ",
+        "ク",
+        "ケ"
+      ],
+      "answer": 3,
+      "explanation": "「け」读 ke，片假名写作「ケ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 15,
+      "category": "清音·平假名认读",
+      "question": "平假名「こ」对应的片假名是哪一个？",
+      "options": [
+        "コ",
+        "ゴ",
+        "ソ",
+        "テ"
+      ],
+      "answer": 0,
+      "explanation": "「こ」读 ko，片假名写作「コ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 16,
+      "category": "清音·平假名认读",
+      "question": "平假名「さ」对应的片假名是哪一个？",
+      "options": [
+        "メ",
+        "ザ",
+        "シ",
+        "サ"
+      ],
+      "answer": 3,
+      "explanation": "「さ」读 sa，片假名写作「サ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 17,
+      "category": "清音·平假名认读",
+      "question": "平假名「す」对应的片假名是哪一个？",
+      "options": [
+        "ツ",
+        "ズ",
+        "ス",
+        "ネ"
+      ],
+      "answer": 2,
+      "explanation": "「す」读 su，片假名写作「ス」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 18,
+      "category": "清音·平假名认读",
+      "question": "平假名「せ」对应的片假名是哪一个？",
+      "options": [
+        "ゼ",
+        "セ",
+        "サ",
+        "ケ"
+      ],
+      "answer": 1,
+      "explanation": "「せ」读 se，片假名写作「セ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 19,
+      "category": "清音·平假名认读",
+      "question": "平假名「そ」对应的片假名是哪一个？",
+      "options": [
+        "コ",
+        "ゾ",
+        "ソ",
+        "オ"
+      ],
+      "answer": 2,
+      "explanation": "「そ」读 so，片假名写作「ソ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 20,
+      "category": "清音·平假名认读",
+      "question": "平假名「た」对应的片假名是哪一个？",
+      "options": [
+        "ム",
+        "ダ",
+        "テ",
+        "タ"
+      ],
+      "answer": 3,
+      "explanation": "「た」读 ta，片假名写作「タ」。片假名多用于外来语、拟声词和强调。"
+    },
+    {
+      "id": 21,
+      "category": "清音·片假名认读",
+      "question": "片假名「ア」的罗马字是哪一个？",
+      "options": [
+        "a",
+        "te",
+        "hi",
+        "ni"
+      ],
+      "answer": 0,
+      "explanation": "「ア」的平假名是「あ」，罗马字 a。"
+    },
+    {
+      "id": 22,
+      "category": "清音·片假名认读",
+      "question": "片假名「イ」的罗马字是哪一个？",
+      "options": [
+        "wa",
+        "mo",
+        "ho",
+        "i"
+      ],
+      "answer": 3,
+      "explanation": "「イ」的平假名是「い」，罗马字 i。"
+    },
+    {
+      "id": 23,
+      "category": "清音·片假名认读",
+      "question": "片假名「ウ」的罗马字是哪一个？",
+      "options": [
+        "u",
+        "ne",
+        "ya",
+        "ma"
+      ],
+      "answer": 0,
+      "explanation": "「ウ」的平假名是「う」，罗马字 u。"
+    },
+    {
+      "id": 24,
+      "category": "清音·片假名认读",
+      "question": "片假名「エ」的罗马字是哪一个？",
+      "options": [
+        "e",
+        "to",
+        "te",
+        "i"
+      ],
+      "answer": 0,
+      "explanation": "「エ」的平假名是「え」，罗马字 e。"
+    },
+    {
+      "id": 25,
+      "category": "清音·片假名认读",
+      "question": "片假名「オ」的罗马字是哪一个？",
+      "options": [
+        "o",
+        "shi",
+        "n",
+        "ko"
+      ],
+      "answer": 0,
+      "explanation": "「オ」的平假名是「お」，罗马字 o。"
+    },
+    {
+      "id": 26,
+      "category": "清音·片假名认读",
+      "question": "片假名「カ」的罗马字是哪一个？",
+      "options": [
+        "mi",
+        "ka",
+        "no",
+        "sa"
+      ],
+      "answer": 1,
+      "explanation": "「カ」的平假名是「か」，罗马字 ka。"
+    },
+    {
+      "id": 27,
+      "category": "清音·片假名认读",
+      "question": "片假名「キ」的罗马字是哪一个？",
+      "options": [
+        "ha",
+        "ki",
+        "ni",
+        "o"
+      ],
+      "answer": 1,
+      "explanation": "「キ」的平假名是「き」，罗马字 ki。"
+    },
+    {
+      "id": 28,
+      "category": "清音·片假名认读",
+      "question": "片假名「ク」的罗马字是哪一个？",
+      "options": [
+        "ku",
+        "so",
+        "fu",
+        "ni"
+      ],
+      "answer": 0,
+      "explanation": "「ク」的平假名是「く」，罗马字 ku。"
+    },
+    {
+      "id": 29,
+      "category": "清音·片假名认读",
+      "question": "片假名「ケ」的罗马字是哪一个？",
+      "options": [
+        "ra",
+        "ke",
+        "ka",
+        "mo"
+      ],
+      "answer": 1,
+      "explanation": "「ケ」的平假名是「け」，罗马字 ke。"
+    },
+    {
+      "id": 30,
+      "category": "清音·片假名认读",
+      "question": "片假名「コ」的罗马字是哪一个？",
+      "options": [
+        "me",
+        "ri",
+        "chi",
+        "ko"
+      ],
+      "answer": 3,
+      "explanation": "「コ」的平假名是「こ」，罗马字 ko。"
+    },
+    {
+      "id": 31,
+      "category": "清音·片假名认读",
+      "question": "片假名「サ」的罗马字是哪一个？",
+      "options": [
+        "sa",
+        "ru",
+        "o",
+        "ke"
+      ],
+      "answer": 0,
+      "explanation": "「サ」的平假名是「さ」，罗马字 sa。"
+    },
+    {
+      "id": 32,
+      "category": "清音·片假名认读",
+      "question": "片假名「シ」的罗马字是哪一个？",
+      "options": [
+        "shi",
+        "ru",
+        "yu",
+        "ro"
+      ],
+      "answer": 0,
+      "explanation": "「シ」的平假名是「し」，罗马字 shi。"
+    },
+    {
+      "id": 33,
+      "category": "清音·片假名认读",
+      "question": "片假名「ス」的罗马字是哪一个？",
+      "options": [
+        "shi",
+        "su",
+        "fu",
+        "ru"
+      ],
+      "answer": 1,
+      "explanation": "「ス」的平假名是「す」，罗马字 su。"
+    },
+    {
+      "id": 34,
+      "category": "清音·片假名认读",
+      "question": "片假名「セ」的罗马字是哪一个？",
+      "options": [
+        "so",
+        "mo",
+        "se",
+        "mu"
+      ],
+      "answer": 2,
+      "explanation": "「セ」的平假名是「せ」，罗马字 se。"
+    },
+    {
+      "id": 35,
+      "category": "清音·片假名认读",
+      "question": "片假名「ソ」的罗马字是哪一个？",
+      "options": [
+        "e",
+        "ro",
+        "so",
+        "ya"
+      ],
+      "answer": 2,
+      "explanation": "「ソ」的平假名是「そ」，罗马字 so。"
+    },
+    {
+      "id": 36,
+      "category": "清音·片假名认读",
+      "question": "片假名「タ」的罗马字是哪一个？",
+      "options": [
+        "se",
+        "a",
+        "ra",
+        "ta"
+      ],
+      "answer": 3,
+      "explanation": "「タ」的平假名是「た」，罗马字 ta。"
+    },
+    {
+      "id": 37,
+      "category": "清音·片假名认读",
+      "question": "片假名「チ」的罗马字是哪一个？",
+      "options": [
+        "chi",
+        "ne",
+        "me",
+        "no"
+      ],
+      "answer": 0,
+      "explanation": "「チ」的平假名是「ち」，罗马字 chi。"
+    },
+    {
+      "id": 38,
+      "category": "清音·片假名认读",
+      "question": "片假名「ツ」的罗马字是哪一个？",
+      "options": [
+        "ki",
+        "ru",
+        "na",
+        "tsu"
+      ],
+      "answer": 3,
+      "explanation": "「ツ」的平假名是「つ」，罗马字 tsu。"
+    },
+    {
+      "id": 39,
+      "category": "清音·片假名认读",
+      "question": "片假名「テ」的罗马字是哪一个？",
+      "options": [
+        "sa",
+        "so",
+        "te",
+        "ke"
+      ],
+      "answer": 2,
+      "explanation": "「テ」的平假名是「て」，罗马字 te。"
+    },
+    {
+      "id": 40,
+      "category": "清音·片假名认读",
+      "question": "片假名「ト」的罗马字是哪一个？",
+      "options": [
+        "ta",
+        "to",
+        "u",
+        "ru"
+      ],
+      "answer": 1,
+      "explanation": "「ト」的平假名是「と」，罗马字 to。"
+    },
+    {
+      "id": 41,
+      "category": "浊音·半浊音",
+      "question": "「ば」对应的片假名是哪一个？",
+      "options": [
+        "バ",
+        "パ",
+        "ダ",
+        "ハ"
+      ],
+      "answer": 0,
+      "explanation": "ば行是は行加浊点（゛），ぱ行是加半浊点（゜）。"
+    },
+    {
+      "id": 42,
+      "category": "浊音·半浊音",
+      "question": "「ぱ」对应的片假名是哪一个？",
+      "options": [
+        "ハ",
+        "バ",
+        "パ",
+        "マ"
+      ],
+      "answer": 2,
+      "explanation": "ぱ行只有五个音，是唯一的半浊音行。"
+    },
+    {
+      "id": 43,
+      "category": "浊音·半浊音",
+      "question": "「ざ」对应的片假名是哪一个？",
+      "options": [
+        "サ",
+        "ザ",
+        "ダ",
+        "ジャ"
+      ],
+      "answer": 1,
+      "explanation": "ざ行来自さ行加浊点；じ读 ji，不是 zi。"
+    },
+    {
+      "id": 44,
+      "category": "浊音·半浊音",
+      "question": "「だ」对应的片假名是哪一个？",
+      "options": [
+        "タ",
+        "ダ",
+        "バ",
+        "ザ"
+      ],
+      "answer": 1,
+      "explanation": "だ行来自た行；ぢ、づ 现代几乎只出现在连浊词里。"
+    },
+    {
+      "id": 45,
+      "category": "浊音·半浊音",
+      "question": "「じ」对应的片假名是哪一个？",
+      "options": [
+        "ズ",
+        "チ",
+        "ヂ",
+        "ジ"
+      ],
+      "answer": 3,
+      "explanation": "じ和ぢ同音，书写不同；片假名都写作ジ／ヂ，读音都是 ji。"
+    },
+    {
+      "id": 46,
+      "category": "浊音·半浊音",
+      "question": "「づ」对应的片假名是哪一个？",
+      "options": [
+        "ツ",
+        "ヅ",
+        "ズ",
+        "ジュ"
+      ],
+      "answer": 1,
+      "explanation": "づ读 zu，与ず同音，只在続く（つづく）这类词里出现。"
+    },
+    {
+      "id": 47,
+      "category": "浊音·半浊音",
+      "question": "「げ」对应的片假名是哪一个？",
+      "options": [
+        "デ",
+        "ケ",
+        "ゲ",
+        "グ"
+      ],
+      "answer": 2,
+      "explanation": "げ来自け加浊点，元気（げんき）是高频词。"
+    },
+    {
+      "id": 48,
+      "category": "浊音·半浊音",
+      "question": "「ぼ」对应的片假名是哪一个？",
+      "options": [
+        "ボ",
+        "ポ",
+        "ホ",
+        "ド"
+      ],
+      "answer": 0,
+      "explanation": "ぼ与ぽ只差一个符号：゛是浊音、゜是半浊音。"
+    },
+    {
+      "id": 49,
+      "category": "浊音·半浊音",
+      "question": "「ぴ」对应的片假名是哪一个？",
+      "options": [
+        "プ",
+        "ヒ",
+        "ビ",
+        "ピ"
+      ],
+      "answer": 3,
+      "explanation": "ぴ是半浊音，来自ひ加半浊点。"
+    },
+    {
+      "id": 50,
+      "category": "浊音·半浊音",
+      "question": "「ぐ」对应的片假名是哪一个？",
+      "options": [
+        "ク",
+        "グ",
+        "ブ",
+        "ゴ"
+      ],
+      "answer": 1,
+      "explanation": "ぐ来自く加浊点，具合（ぐあい）常用。"
+    },
+    {
+      "id": 51,
+      "category": "浊音·半浊音",
+      "question": "「ぜ」对应的片假名是哪一个？",
+      "options": [
+        "ゼ",
+        "セ",
+        "デ",
+        "ゾ"
+      ],
+      "answer": 0,
+      "explanation": "ぜ来自せ加浊点。"
+    },
+    {
+      "id": 52,
+      "category": "浊音·半浊音",
+      "question": "「ど」对应的片假名是哪一个？",
+      "options": [
+        "ボ",
+        "ト",
+        "ド",
+        "ダ"
+      ],
+      "answer": 2,
+      "explanation": "ど来自と加浊点，動物（どうぶつ）常用。"
+    },
+    {
+      "id": 53,
+      "category": "浊音·半浊音",
+      "question": "「ぱ」行属于下列哪一类？",
+      "options": [
+        "半浊音",
+        "清音",
+        "浊音",
+        "拗音"
+      ],
+      "answer": 0,
+      "explanation": "清音（かさたは行）→ 加゛是浊音 → は行加゜才是半浊音（ぱ行五个）。"
+    },
+    {
+      "id": 54,
+      "category": "浊音·半浊音",
+      "question": "「が」行与「か」行的区别是？",
+      "options": [
+        "送气强弱不同",
+        "声带是否振动（清浊对立）",
+        "口型完全不同",
+        "一个送气一个卷舌"
+      ],
+      "answer": 1,
+      "explanation": "か行不振动声带，が行振动；口型一模一样，所以听力题最爱用这一对做干扰。"
+    },
+    {
+      "id": 55,
+      "category": "浊音·半浊音",
+      "question": "下列哪一组全部是浊音？",
+      "options": [
+        "ぱ・ぴ・ぷ・ぺ",
+        "か・さ・た・は",
+        "が・ざ・だ・ば",
+        "きゃ・しゃ・ちゃ・にゃ"
+      ],
+      "answer": 2,
+      "explanation": "浊音是かさたは行加゛得到的四行；ぱ行是半浊音，きゃ行是拗音。"
+    },
+    {
+      "id": 56,
+      "category": "浊音·半浊音",
+      "question": "「じ」的罗马字写法是？",
+      "options": [
+        "chi",
+        "zi",
+        "ji",
+        "di"
+      ],
+      "answer": 2,
+      "explanation": "ヘボン式罗马字：じ＝ji、ぢ＝ji（旧式写作 di），所以只能靠假名区分同音词。"
+    },
+    {
+      "id": 57,
+      "category": "拗音",
+      "question": "「きゃ」的罗马字是哪一个？",
+      "options": [
+        "ka",
+        "kiya",
+        "kyu",
+        "kya"
+      ],
+      "answer": 3,
+      "explanation": "き＋小写ゃ，一个音节；写成大写ヤ就成了 ki-ya 两个音节。"
+    },
+    {
+      "id": 58,
+      "category": "拗音",
+      "question": "「しょ」的罗马字是哪一个？",
+      "options": [
+        "shu",
+        "shiyo",
+        "sho",
+        "so"
+      ],
+      "answer": 2,
+      "explanation": "し＋小写ょ；写真しゃしん、食事しょくじ。"
+    },
+    {
+      "id": 59,
+      "category": "拗音",
+      "question": "「ちょ」的罗马字是哪一个？",
+      "options": [
+        "chiyo",
+        "cho",
+        "chu",
+        "tso"
+      ],
+      "answer": 1,
+      "explanation": "ち＋小写ょ；貯金ちょきん。"
+    },
+    {
+      "id": 60,
+      "category": "拗音",
+      "question": "「にゃ」的罗马字是哪一个？",
+      "options": [
+        "niya",
+        "nya",
+        "nyu",
+        "na"
+      ],
+      "answer": 1,
+      "explanation": "に＋小写ゃ；猫叫 にゃあ。"
+    },
+    {
+      "id": 61,
+      "category": "拗音",
+      "question": "「りゅ」的罗马字是哪一个？",
+      "options": [
+        "ru",
+        "riyu",
+        "ryo",
+        "ryu"
+      ],
+      "answer": 3,
+      "explanation": "り＋小写ゅ；竜りゅう。"
+    },
+    {
+      "id": 62,
+      "category": "拗音",
+      "question": "「ぎゅ」的罗马字是哪一个？",
+      "options": [
+        "gyu",
+        "giyu",
+        "gyo",
+        "gu"
+      ],
+      "answer": 0,
+      "explanation": "牛乳ぎゅうにゅう 里两个拗音连用。"
+    },
+    {
+      "id": 63,
+      "category": "拗音",
+      "question": "「じゃ」的罗马字是哪一个？",
+      "options": [
+        "ju",
+        "jya",
+        "ja",
+        "jaa"
+      ],
+      "answer": 2,
+      "explanation": "じゃ＝じ＋小写ゃ；蛇口じゃぐち。"
+    },
+    {
+      "id": 64,
+      "category": "拗音",
+      "question": "「びょ」的罗马字是哪一个？",
+      "options": [
+        "bo",
+        "biyo",
+        "byu",
+        "byo"
+      ],
+      "answer": 3,
+      "explanation": "び＋小写ょ；秒びょう。"
+    },
+    {
+      "id": 65,
+      "category": "拗音",
+      "question": "「しゃ」的片假名写法是哪一个？",
+      "options": [
+        "シヤ",
+        "シャ",
+        "シュ",
+        "サ"
+      ],
+      "answer": 1,
+      "explanation": "し＋小写ゃ → シャ；写成 シヤ 是两个音节。"
+    },
+    {
+      "id": 66,
+      "category": "拗音",
+      "question": "「ちゅ」的片假名写法是哪一个？",
+      "options": [
+        "チユ",
+        "チュ",
+        "チョ",
+        "ツ"
+      ],
+      "answer": 1,
+      "explanation": "ち＋小写ゅ → チュ，中国ちゅうごく。"
+    },
+    {
+      "id": 67,
+      "category": "拗音",
+      "question": "「ひょ」的片假名写法是哪一个？",
+      "options": [
+        "ヒョ",
+        "ヒヨ",
+        "ヒュ",
+        "ハ"
+      ],
+      "answer": 0,
+      "explanation": "ひ＋小写ょ → ヒョ，表ひょう。"
+    },
+    {
+      "id": 68,
+      "category": "拗音",
+      "question": "「みゃ」的片假名写法是哪一个？",
+      "options": [
+        "ミャ",
+        "ミヤ",
+        "ミュ",
+        "マ"
+      ],
+      "answer": 0,
+      "explanation": "み＋小写ゃ → ミャ，脈みゃく。"
+    },
+    {
+      "id": 69,
+      "category": "拗音",
+      "question": "「じゃ」的片假名写法是哪一个？",
+      "options": [
+        "ジュ",
+        "ジヤ",
+        "ジャ",
+        "ザ"
+      ],
+      "answer": 2,
+      "explanation": "じ＋小写ゃ → ジャ，蛇口じゃぐち。"
+    },
+    {
+      "id": 70,
+      "category": "拗音",
+      "question": "「ぴゃ」的片假名写法是哪一个？",
+      "options": [
+        "パ",
+        "ピヤ",
+        "ピュ",
+        "ピャ"
+      ],
+      "answer": 3,
+      "explanation": "ぴ＋小写ゃ → ピャ，八百はっぴゃく。"
+    },
+    {
+      "id": 71,
+      "category": "拗音",
+      "question": "「ぎょ」的片假名写法是哪一个？",
+      "options": [
+        "ギュ",
+        "ギヨ",
+        "ギョ",
+        "ゴ"
+      ],
+      "answer": 2,
+      "explanation": "ぎ＋小写ょ → ギョ，漁業ぎょぎょう。"
+    },
+    {
+      "id": 72,
+      "category": "拗音",
+      "question": "「ちょ」的片假名写法是哪一个？",
+      "options": [
+        "チョ",
+        "チヨ",
+        "チュ",
+        "ト"
+      ],
+      "answer": 0,
+      "explanation": "ち＋小写ょ → チョ，貯金ちょきん。"
+    },
+    {
+      "id": 73,
+      "category": "拗音",
+      "question": "下列哪一个是拗音？",
+      "options": [
+        "きや",
+        "きゃ",
+        "きよ",
+        "くや"
+      ],
+      "answer": 1,
+      "explanation": "拗音必须是「い段假名＋小写ゃゅょ」；きや、きよ 都是两个正常大小的假名，属两个音节。"
+    },
+    {
+      "id": 74,
+      "category": "拗音",
+      "question": "「しゃ」的片假名写法是？",
+      "options": [
+        "シャ",
+        "シヤ",
+        "シャー",
+        "サ"
+      ],
+      "answer": 0,
+      "explanation": "し＋小写ゃ → シャ，长音符号ー不是假名。"
+    },
+    {
+      "id": 75,
+      "category": "拗音",
+      "question": "「ちゃ」和「ちゅ」的区别在？",
+      "options": [
+        "一个是片假名",
+        "声调不同",
+        "一个浊音一个清音",
+        "后面的小写假名不同（ゃ / ゅ）"
+      ],
+      "answer": 3,
+      "explanation": "拗音靠小写ゃゅょ区分：ちゃ cha、ちゅ chu、ちょ cho。"
+    },
+    {
+      "id": 76,
+      "category": "拗音",
+      "question": "「ぎゃく（逆）」里的「ぎゃ」属于？",
+      "options": [
+        "不是拗音",
+        "清音拗音",
+        "半浊音拗音",
+        "浊音拗音"
+      ],
+      "answer": 3,
+      "explanation": "が行加小写ゃ = 浊音拗音；ぱ行加小写ゃ 才是半浊音拗音（ぴゃ）。"
+    },
+    {
+      "id": 77,
+      "category": "拗音",
+      "question": "「りょこう」的正确罗马字是？",
+      "options": [
+        "ryokou",
+        "riokou",
+        "ryokoh",
+        "rikou"
+      ],
+      "answer": 0,
+      "explanation": "りょ＝ryo，こう＝kou（长音按 o 段＋u 拼写）。"
+    },
+    {
+      "id": 78,
+      "category": "拗音",
+      "question": "下列哪一组全部是拗音？",
+      "options": [
+        "ぱ・ば・だ",
+        "きや・しゆ・ちよ",
+        "か・さ・た",
+        "きゃ・しゅ・ちょ"
+      ],
+      "answer": 3,
+      "explanation": "判断标准只有一条：第二个假名是不是小写的ゃゅょ。"
+    },
+    {
+      "id": 79,
+      "category": "汉字例词读音",
+      "question": "「学校」的正确读音是？",
+      "options": [
+        "がこう",
+        "がっこう",
+        "がっこ",
+        "かっこう"
+      ],
+      "answer": 1,
+      "explanation": "学校＝がっこう，促音っ＋长音う。"
+    },
+    {
+      "id": 80,
+      "category": "汉字例词读音",
+      "question": "「写真」的正确读音是？",
+      "options": [
+        "しゃしん",
+        "さしん",
+        "しゃじん",
+        "しんしゃ"
+      ],
+      "answer": 0,
+      "explanation": "写真＝しゃしん；しゃ是拗音，しん是拨音。"
+    },
+    {
+      "id": 81,
+      "category": "汉字例词读音",
+      "question": "「百」的正确读音是？",
+      "options": [
+        "しゃく",
+        "ひゃっ",
+        "ひゃく"
+      ],
+      "answer": 2,
+      "explanation": "百＝ひゃく，拗音ひゃ＋く。"
+    },
+    {
+      "id": 82,
+      "category": "汉字例词读音",
+      "question": "「旅行」的正确读音是？",
+      "options": [
+        "りょこう",
+        "りょうこう",
+        "りこう"
+      ],
+      "answer": 0,
+      "explanation": "旅行＝りょこう；りょ是拗音，こう是长音。"
+    },
+    {
+      "id": 83,
+      "category": "汉字例词读音",
+      "question": "「病院」的正确读音是？",
+      "options": [
+        "びょいん",
+        "びょういん",
+        "ひょういん"
+      ],
+      "answer": 1,
+      "explanation": "病院＝びょういん；びょ＋う＋いん。"
+    },
+    {
+      "id": 84,
+      "category": "汉字例词读音",
+      "question": "「電話」的正确读音是？",
+      "options": [
+        "でんわ",
+        "てんわ",
+        "でんは"
+      ],
+      "answer": 0,
+      "explanation": "電話＝でんわ；で是浊音，ん是拨音，わ是半元音。"
+    },
+    {
+      "id": 85,
+      "category": "汉字例词读音",
+      "question": "「元気」的正确读音是？",
+      "options": [
+        "げんぎ",
+        "けんき",
+        "げんき"
+      ],
+      "answer": 2,
+      "explanation": "元気＝げんき；げ浊音＋ん拨音＋き清音。"
+    },
+    {
+      "id": 86,
+      "category": "汉字例词读音",
+      "question": "「牛乳」的正确读音是？",
+      "options": [
+        "きゅうにゅう",
+        "ぎゅうにゅう",
+        "ぎゅうにゅ"
+      ],
+      "answer": 1,
+      "explanation": "牛乳＝ぎゅうにゅう，两个拗音连用。"
+    },
+    {
+      "id": 87,
+      "category": "汉字例词读音",
+      "question": "「発表」的正确读音是？",
+      "options": [
+        "はっぴょう",
+        "はっぴょ",
+        "はつひょう"
+      ],
+      "answer": 0,
+      "explanation": "発表＝はっぴょう；っ促音＋ぴ半浊音拗音。"
+    },
+    {
+      "id": 88,
+      "category": "汉字例词读音",
+      "question": "「食事」的正确读音是？",
+      "options": [
+        "しょくし",
+        "しょくじ",
+        "しょくぢ"
+      ],
+      "answer": 1,
+      "explanation": "食事＝しょくじ；しょ拗音＋じ浊音。"
+    },
+    {
+      "id": 89,
+      "category": "汉字例词读音",
+      "question": "「銀行」的正确读音是？",
+      "options": [
+        "ぎんこ",
+        "きんこう",
+        "ぎんこう"
+      ],
+      "answer": 2,
+      "explanation": "銀行＝ぎんこう；ぎ浊音＋ん拨音＋こう长音。"
+    },
+    {
+      "id": 90,
+      "category": "汉字例词读音",
+      "question": "「散歩」的正确读音是？",
+      "options": [
+        "さんぽ",
+        "さんぼ",
+        "さんほ"
+      ],
+      "answer": 0,
+      "explanation": "散歩＝さんぽ；ぽ是半浊音，别写成ぼ。"
+    },
+    {
+      "id": 91,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：か、か。",
+      "options": [
+        "が",
+        "か",
+        "た",
+        "さ"
+      ],
+      "answer": 1,
+      "explanation": "正确答案是「か」。清音か，声带不振动。",
+      "audioUrl": "audio/kana-50on-test/91.m4a"
+    },
+    {
+      "id": 92,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：が、が。",
+      "options": [
+        "か",
+        "ば",
+        "だ",
+        "が"
+      ],
+      "answer": 3,
+      "explanation": "正确答案是「が」。浊音が，与か口型相同、声带振动。",
+      "audioUrl": "audio/kana-50on-test/92.m4a"
+    },
+    {
+      "id": 93,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：さ、さ。",
+      "options": [
+        "た",
+        "ざ",
+        "しゃ",
+        "さ"
+      ],
+      "answer": 3,
+      "explanation": "正确答案是「さ」。清音さ。",
+      "audioUrl": "audio/kana-50on-test/93.m4a"
+    },
+    {
+      "id": 94,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：ざ、ざ。",
+      "options": [
+        "さ",
+        "だ",
+        "ざ",
+        "じゃ"
+      ],
+      "answer": 2,
+      "explanation": "正确答案是「ざ」。浊音ざ。",
+      "audioUrl": "audio/kana-50on-test/94.m4a"
+    },
+    {
+      "id": 95,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：た、た。",
+      "options": [
+        "か",
+        "た",
+        "な",
+        "だ"
+      ],
+      "answer": 1,
+      "explanation": "正确答案是「た」。清音た。",
+      "audioUrl": "audio/kana-50on-test/95.m4a"
+    },
+    {
+      "id": 96,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：だ、だ。",
+      "options": [
+        "だ",
+        "た",
+        "ば",
+        "ざ"
+      ],
+      "answer": 0,
+      "explanation": "正确答案是「だ」。浊音だ。",
+      "audioUrl": "audio/kana-50on-test/96.m4a"
+    },
+    {
+      "id": 97,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：は、は。",
+      "options": [
+        "は",
+        "ぱ",
+        "ま",
+        "ば"
+      ],
+      "answer": 0,
+      "explanation": "正确答案是「は」。清音は，不振动、不送气爆破。",
+      "audioUrl": "audio/kana-50on-test/97.m4a"
+    },
+    {
+      "id": 98,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：ば、ば。",
+      "options": [
+        "ぱ",
+        "は",
+        "ば",
+        "だ"
+      ],
+      "answer": 2,
+      "explanation": "正确答案是「ば」。浊音ば，b 音带振动。",
+      "audioUrl": "audio/kana-50on-test/98.m4a"
+    },
+    {
+      "id": 99,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：ぱ、ぱ。",
+      "options": [
+        "ぱ",
+        "ま",
+        "は",
+        "ば"
+      ],
+      "answer": 0,
+      "explanation": "正确答案是「ぱ」。半浊音ぱ，p 音送气明显。",
+      "audioUrl": "audio/kana-50on-test/99.m4a"
+    },
+    {
+      "id": 100,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：つ、つ。",
+      "options": [
+        "す",
+        "つ",
+        "ち",
+        "し"
+      ],
+      "answer": 1,
+      "explanation": "正确答案是「つ」。つ tsu 与ち chi 最容易混。",
+      "audioUrl": "audio/kana-50on-test/100.m4a"
+    },
+    {
+      "id": 101,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：し、し。",
+      "options": [
+        "じ",
+        "し",
+        "ひ",
+        "ち"
+      ],
+      "answer": 1,
+      "explanation": "正确答案是「し」。し shi，不读 si。",
+      "audioUrl": "audio/kana-50on-test/101.m4a"
+    },
+    {
+      "id": 102,
+      "category": "听力·听音选假名",
+      "question": "听音频，选出你听到的假名。",
+      "audio": "女：ふ、ふ。",
+      "options": [
+        "は",
+        "ぷ",
+        "ぶ",
+        "ふ"
+      ],
+      "answer": 3,
+      "explanation": "正确答案是「ふ」。ふ读 fu，是双唇摩擦音，上齿不要咬下唇；与は、ぶ、ぷ 口型相近，靠摩擦与浊音区分。",
+      "audioUrl": "audio/kana-50on-test/102.m4a"
+    },
+    {
+      "id": 103,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：がっこう、がっこう。",
+      "options": [
+        "銀行",
+        "高校",
+        "会社",
+        "学校"
+      ],
+      "answer": 3,
+      "explanation": "正确答案是「学校」（がっこう）。がっこう＝学校。",
+      "audioUrl": "audio/kana-50on-test/103.m4a"
+    },
+    {
+      "id": 104,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：ぎんこう、ぎんこう。",
+      "options": [
+        "金庫",
+        "学校",
+        "病院",
+        "銀行"
+      ],
+      "answer": 3,
+      "explanation": "正确答案是「銀行」（ぎんこう）。ぎんこう＝銀行。",
+      "audioUrl": "audio/kana-50on-test/104.m4a"
+    },
+    {
+      "id": 105,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：しゃしん、しゃしん。",
+      "options": [
+        "写生",
+        "写真",
+        "新聞",
+        "社員"
+      ],
+      "answer": 1,
+      "explanation": "正确答案是「写真」（しゃしん）。しゃしん＝写真。",
+      "audioUrl": "audio/kana-50on-test/105.m4a"
+    },
+    {
+      "id": 106,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：りょこう、りょこう。",
+      "options": [
+        "流行",
+        "量",
+        "旅行",
+        "旅館"
+      ],
+      "answer": 2,
+      "explanation": "正确答案是「旅行」（りょこう）。りょこう＝旅行。",
+      "audioUrl": "audio/kana-50on-test/106.m4a"
+    },
+    {
+      "id": 107,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：びょういん、びょういん。",
+      "options": [
+        "病院",
+        "美容院",
+        "本屋",
+        "銀行"
+      ],
+      "answer": 0,
+      "explanation": "正确答案是「病院」（びょういん）。びょういん＝病院；美容院是 びよういん，长音位置不同。",
+      "audioUrl": "audio/kana-50on-test/107.m4a"
+    },
+    {
+      "id": 108,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：ぎゅうにゅう、ぎゅうにゅう。",
+      "options": [
+        "牛乳",
+        "入浴",
+        "乳酸",
+        "牛肉"
+      ],
+      "answer": 0,
+      "explanation": "正确答案是「牛乳」（ぎゅうにゅう）。ぎゅうにゅう＝牛乳。",
+      "audioUrl": "audio/kana-50on-test/108.m4a"
+    },
+    {
+      "id": 109,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：げんき、げんき。",
+      "options": [
+        "電気",
+        "元気",
+        "天気",
+        "元日"
+      ],
+      "answer": 1,
+      "explanation": "正确答案是「元気」（げんき）。げんき＝元気。",
+      "audioUrl": "audio/kana-50on-test/109.m4a"
+    },
+    {
+      "id": 110,
+      "category": "听力·听词选汉字",
+      "question": "听音频，选出你听到的词。",
+      "audio": "男：さんぽ、さんぽ。",
+      "options": [
+        "三方",
+        "三歩",
+        "散策",
+        "散歩"
+      ],
+      "answer": 3,
+      "explanation": "正确答案是「散歩」（さんぽ）。さんぽ＝散歩，ぽ是半浊音。",
+      "audioUrl": "audio/kana-50on-test/110.m4a"
+    }
+  ]
+}
