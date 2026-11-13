@@ -2933,11 +2933,20 @@
   }
 
   // 处理文件导入
+  // 两个入口共用一个文件选择器：首页只收题库 .json，歌词页才允许 zip 歌曲包。
+  let importFromLyrics = false;
+
   function handleImportFile(file) {
     if (!file) return;
-    // 歌曲包（.zip：歌词 JSON + 音频）走独立解包通道
     const fname = (file.name || '').toLowerCase();
-    if (fname.endsWith('.zip') || /zip/.test(file.type || '')) { handleLyricsPackZip(file); return; }
+    if (fname.endsWith('.zip') || /zip/.test(file.type || '')) {
+      if (!importFromLyrics) {
+        showResultModal(false, '题库导入只支持 .json 文件。歌词歌曲包（zip）请到「歌词精读」页导入');
+        return;
+      }
+      handleLyricsPackZip(file);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
@@ -3965,6 +3974,8 @@
   // ===== 事件绑定 =====
   function bindImportEvents() {
     $('import-btn').addEventListener('click', () => {
+      importFromLyrics = false;
+      $('file-input').accept = '.json,application/json';
       $('file-input').click();
     });
 
@@ -4369,7 +4380,7 @@
   // 浏览器里打开时退化为「跳转浏览器下载 APK」。
   // 版本号三处必须一起改：这里、android/app/build.gradle 的 versionName、package.json。
   // 落后于 Release tag 会让「发现新版本」弹窗永远消不掉；tools/build-www.js 每次构建都会核对。
-  const APP_VERSION = '1.8.7';
+  const APP_VERSION = '1.8.8';
   const GITHUB_OWNER = 'cedarln';
   const GITHUB_REPO = 'paopao-quiz';
   const API_LATEST = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO + '/releases/latest';
@@ -5892,8 +5903,12 @@
     const harmonyBox = $('lds-harmony');
     if (harmonyBox) harmonyBox.addEventListener('change', e => setLyricsDisplay({ harmony: e.target.checked }));
 
-    // 导入 / 说明（导入复用全局 file-input，由 handleImportFile 嗅探 schema 分流）
-    $('lyrics-import-btn').addEventListener('click', () => $('file-input').click());
+    // 导入 / 说明（导入复用全局 file-input；歌词入口放开 zip，由 handleImportFile 按来源分流）
+    $('lyrics-import-btn').addEventListener('click', () => {
+      importFromLyrics = true;
+      $('file-input').accept = '.json,.zip,application/json,application/zip';
+      $('file-input').click();
+    });
     $('lyrics-help-btn').addEventListener('click', () => { $('lyrics-help-modal').style.display = 'flex'; });
     $('lyrics-help-close').addEventListener('click', () => { $('lyrics-help-modal').style.display = 'none'; });
     $('lyrics-help-ok').addEventListener('click', () => { $('lyrics-help-modal').style.display = 'none'; });

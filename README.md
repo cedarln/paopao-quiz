@@ -4,7 +4,7 @@
 
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Platform](https://img.shields.io/badge/platform-Android%20%7C%20Web-green)
-![Version](https://img.shields.io/badge/version-1.8.7-orange)
+![Version](https://img.shields.io/badge/version-1.8.8-orange)
 
 ---
 
@@ -88,7 +88,7 @@ cd android && ./gradlew assembleRelease
 
 ## 📦 版本
 
-当前版本 **v1.8.7**，完整安装包与历史版本见 [Releases](https://github.com/cedarln/paopao-quiz/releases)。
+当前版本 **v1.8.8**，完整安装包与历史版本见 [Releases](https://github.com/cedarln/paopao-quiz/releases)。
 
 这里只记录改动较大的版本：
 
