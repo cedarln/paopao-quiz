@@ -4801,9 +4801,10 @@
   const PORTAL_STATUS_ORDER = { new: 0, update: 1, loaded: 2 };
 
   // 日语题库默认隐藏（面向教资等非日语用户减少干扰）。
-  // 彩蛋解锁：在 5 秒内连点右上角「刷新」10 次 → 显示全部（解锁状态只在本次运行内生效）。
+  // 彩蛋解锁：在 5 秒内连点弹窗左上角「在线题库」标题 10 次 → 显示全部
+  // （解锁状态只在本次运行内生效；点标题不触发加载，位置固定，适合快速连点）。
   let portalJapaneseUnlocked = false;
-  let portalRefreshClicks = [];
+  let portalTitleClicks = [];
 
   function isJapaneseBank(item) {
     const hay = (item.displayName + ' ' + item.name + ' ' + (item.bankKey || '')).toLowerCase();
@@ -4946,20 +4947,22 @@
   function bindPortalAndUpdateEvents() {
     $('portal-btn').addEventListener('click', openPortalModal);
     $('portal-close-btn').addEventListener('click', closePortalModal);
-    $('portal-refresh-btn').addEventListener('click', () => {
-      // 彩蛋判定先于刷新：解锁的那一下直接重绘缓存列表，不依赖网络
-      const now = Date.now();
-      portalRefreshClicks = portalRefreshClicks.filter(t => now - t < 5000);
-      portalRefreshClicks.push(now);
-      if (!portalJapaneseUnlocked && portalRefreshClicks.length >= 10) {
-        portalJapaneseUnlocked = true;
-        showToast('您已解锁所有题库');
-        if (portalAllItems.length) renderPortalList(portalAllItems);
-        else loadPortalList(false);
-        return;
-      }
-      loadPortalList(false);
-    });
+    $('portal-refresh-btn').addEventListener('click', () => loadPortalList(false));
+    // 彩蛋判定挂在标题上：连点左上角「在线题库」10 次（5 秒内）解锁日语题库
+    const portalTitle = document.querySelector('#portal-modal .modal-title');
+    if (portalTitle) {
+      portalTitle.addEventListener('click', () => {
+        const now = Date.now();
+        portalTitleClicks = portalTitleClicks.filter(t => now - t < 5000);
+        portalTitleClicks.push(now);
+        if (!portalJapaneseUnlocked && portalTitleClicks.length >= 10) {
+          portalJapaneseUnlocked = true;
+          showToast('您已解锁所有题库');
+          if (portalAllItems.length) renderPortalList(portalAllItems);
+          else loadPortalList(false);
+        }
+      });
+    }
     const searchEl = $('portal-search');
     if (searchEl) searchEl.addEventListener('input', () => renderPortalList(portalAllItems));
     document.querySelectorAll('#portal-filters .portal-chip').forEach(chip => {

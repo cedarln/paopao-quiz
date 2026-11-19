@@ -4235,3 +4235,11 @@ body.custom-bg::before {
 .lyrics-help-text li { margin-bottom: 6px; }
 .lyrics-help-text code { background: var(--bg); padding: 1px 6px; border-radius: 5px; font-size: 12px; color: var(--primary); }
 .lyrics-help-text b { color: var(--text-primary); }
+
+/* 彩蛋触发区：连点「在线题库」标题解锁日语题库，禁选中/双击缩放保证快速连点 */
+#portal-modal .modal-title {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  cursor: default;
+}
